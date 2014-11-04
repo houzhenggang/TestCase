@@ -67,7 +67,7 @@ class DumpsysCpuinfoThread(threading.Thread):
         output.flush()
         while self.loop:
             time.sleep(self.interval)
-            curfreq = os.popen('adb shell cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq').readline().strip()
+            curfreq = os.popen('adb shell cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq').readline().strip()
             curtemp = os.popen('adb shell cat /sys/class/thermal/thermal_zone0/temp').readline().strip()
             output.write('{0},{1}\n'.format(curfreq, curtemp))
             output.flush()
@@ -110,7 +110,7 @@ def getAppsInfo(package, title, activity):
         output = open(path, 'a+')
 
     output.write('{0},{1},{2[0]},{2[1]},{2[2]},{2[3]},{2[4]},{2[5]},{3},{4},{5}\n'.format(
-            title, size, t, min(t[1:]), max(t[1:]), sum(t[1:]) / (len(t) - 1)))
+            title, size, t, min(t[1:]), max(t[1:]), round(float(sum(t[1:])) / (len(t) - 1), 1)))
     output.close()
 
 def monkey(package):
@@ -125,7 +125,7 @@ def monkey(package):
     t2.start()
     t3.start()
     monkey = open(os.path.join(outdir, 'monkey.txt'), 'w+')
-    subprocess.Popen('adb shell monkey -p {0} -s 10 --throttle 500 --pct-anyevent 0 --ignore-timeouts --ignore-crashes -v 20000'.format(
+    subprocess.Popen('adb shell monkey -p {0} -s 10 --throttle 100 --pct-anyevent 0 --ignore-timeouts --ignore-crashes -v 100000'.format(
             package), shell=True, stdout=monkey, stderr=monkey).wait()
     monkey.close()
     t1.stop()
@@ -221,16 +221,19 @@ def reboot():
     report.close()
 
 def install():
+    os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
+    time.sleep(3)
+
     report = open(os.path.join(workout, 'install.csv'), 'w')
     report.write(codecs.BOM_UTF8)
-    report.write('应用文件名,安装,启动,卸载,异常\n')
+    report.write('应用文件名,安装,启动,卸载,异常1,异常2,异常3\n')
 
     pattern = os.path.join(os.path.join(workdir, 'TOP10APK'), '*.apk')
     for filename in glob.glob(pattern):
         lines = os.popen('adb install -r \"{0}\"'.format(filename)).readlines()
         install = 'Success' in [line.strip() for line in lines]
         launch = True
-        crash = anr = None
+        except1 = crash = anr = except2 = None
         uninstall = False
         if install:
             time.sleep(3)
@@ -248,13 +251,17 @@ def install():
                     anr = 'ANR: {0}'.format(line[8:].strip())
                     break
             time.sleep(3)
-            lines = os.popen('adb uninstall {0}'.format(package))
+            lines = os.popen('adb uninstall {0}'.format(package)).readlines()
             uninstall = 'Success' in [line.strip() for line in lines]
+            if not uninstall:
+                except2 = lines[-1].strip()
         else:
+            except1 = lines[-1].strip()
             launch = False
 
         report.write('{0},{1},{2},{3},{4}\n'.format(os.path.basename(filename), 'Pass' if install else 'Fail',
-                'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail', crash if crash else anr if anr else ''))
+                'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail', except1 if except1 else '',
+                crash if crash else anr if anr else '', except2 if except2 else ''))
         report.flush()
     report.close()
 
@@ -263,8 +270,8 @@ def main():
     if not os.path.exists(workout):
         os.mkdir(workout)
 
-    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestCommon.apk')))
-    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'SettingsTest.apk')))
+    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestCommon.apk'))).readlines()
+    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'SettingsTest.apk'))).readlines()
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'p:')
@@ -279,10 +286,10 @@ def main():
     if len(packages) == 0:
         packages = [line[8:].strip() for line in os.popen('adb shell pm list package -s').readlines()]
 
-    os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList')
+    os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readlines()
     time.sleep(3)
     jobj = eval(os.popen('adb shell cat /data/data/com.ztemt.test.common/files/launcher').readline())
-    os.popen('adb shell am instrument -w -e class com.android.settings.test.DevelopmentSettingsTestCase#testTrackFrameTimeIsDumpsysGfxinfo com.android.settings.test/com.google.android.apps.common.testing.testrunner.GoogleInstrumentationTestRunner')
+    os.popen('adb shell am instrument -w -e class com.android.settings.test.DevelopmentSettingsTestCase#testTrackFrameTimeIsDumpsysGfxinfo com.android.settings.test/com.google.android.apps.common.testing.testrunner.GoogleInstrumentationTestRunner').readlines()
 
     for package in packages:
         if package in jobj:
@@ -294,8 +301,8 @@ def main():
 
     reboot()
 
-    os.popen('adb uninstall com.ztemt.test.common')
-    os.popen('adb uninstall com.android.settings.test')
+    os.popen('adb uninstall com.ztemt.test.common').readlines()
+    os.popen('adb uninstall com.android.settings.test').readlines()
 
 workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 workout = os.path.join(workdir, 'out')
