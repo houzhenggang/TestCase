@@ -203,7 +203,7 @@ def monkey(package=None):
 
     while True:
         os.system('adb wait-for-device')
-        if not os.popen('adb shell /data/local/tmp/busybox pidof com.android.commands.monkey').readline().strip():
+        if not os.popen('adb shell ps | grep com.android.commands.monkey').readline().strip():
             break
         time.sleep(3)
 
@@ -300,9 +300,6 @@ def main():
         if not os.path.exists(workout):
             os.mkdir(workout)
 
-        os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'busybox'))).readlines()
-        os.popen('adb shell chmod 755 /data/local/tmp/busybox').readlines()
-
         os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestCommon.apk'))).readlines()
         os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readlines()
         time.sleep(3)
@@ -334,11 +331,11 @@ def main():
             monkey()
             for t in threads:
                 t.stop()
+            t3.stop()
             for t in threads:
                 t.join()
-            t3.stop()
             t3.join()
-        elif operation == 2:
+        elif operation == 2 or operation == 3:
             for package in packages:
                 outdir = os.path.join(workout, package)
                 if not os.path.exists(outdir):
@@ -349,19 +346,19 @@ def main():
                 t1.start()
                 t2.start()
                 t3.start()
-                monkey(package)
+                if operation == 2:
+                    monkey(package)
+                elif operation == 3:
+                    raw_input('\nEnter manual mode, press key ENTER to exit [{0}]'.format(package))
                 t1.stop()
                 t2.stop()
                 t3.stop()
                 t1.join()
                 t2.join()
                 t3.join()
-        elif operation == 3:
-            pass
         install()
         reboot()
 
-        os.popen('adb shell rm /data/local/tmp/busybox').readlines()
         os.popen('adb uninstall com.ztemt.test.common').readlines()
         os.popen('adb uninstall com.android.settings.test').readlines()
     else:

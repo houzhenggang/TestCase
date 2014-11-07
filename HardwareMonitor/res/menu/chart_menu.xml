@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item android:id="@+id/chart_data_update_toggle"
+        android:enabled="true"
+        android:title="Disable Chart Update"
+        android:checked="false"
+        android:checkable="false"
+        android:visible="true" />
+
+</menu>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item android:id="@+id/all_listeners_add"
+        android:visible="true"
+        android:title="Add All Listeners"
+        android:titleCondensed="Add All Listeners"
+        android:checkable="false"
+        android:checked="false"
+        android:enabled="true" />
+    <item android:id="@+id/all_listeners_remove"
+        android:checked="false"
+        android:checkable="false"
+        android:visible="true"
+        android:titleCondensed="Remove All Listeners"
+        android:title="Remove All Listeners"
+        android:enabled="true"
+        android:orderInCategory="1" />
+    <item android:id="@+id/ui_data_update_toggle"
+        android:enabled="true"
+        android:title="Disable Screen Update"
+        android:checked="false"
+        android:checkable="false"
+        android:visible="true"
+        android:orderInCategory="3" />
+
+</menu>

@@ -1,1 +1,3 @@
-�����ֻ�������USB���ԣ�˫��start.bat��ʼ
+1.在当前目录下新建TOP10APK文件夹，拷贝APK至该文件夹下
+2.连接设备，打开设备USB调试功能
+3.双击start.bat开始
