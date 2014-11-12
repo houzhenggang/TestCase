@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.SensorManager;
+import android.os.Handler;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.EditText;
@@ -47,6 +48,7 @@ public class SensorClickListener implements OnClickListener {
     }
 
     private Context mContext;
+    private Handler mHandler = new Handler();
     protected SensorManager mSensorManager;
 
     // The item associated with this dialog/listener
@@ -80,15 +82,19 @@ public class SensorClickListener implements OnClickListener {
             break;
         case R.id.delay_button_normal:
             setStreamRate(SensorManager.SENSOR_DELAY_NORMAL);
+            setStreamTimer();
             break;
         case R.id.delay_button_ui:
             setStreamRate(SensorManager.SENSOR_DELAY_UI);
+            setStreamTimer();
             break;
         case R.id.delay_button_game:
             setStreamRate(SensorManager.SENSOR_DELAY_GAME);
+            setStreamTimer();
             break;
         case R.id.delay_button_fastest:
             setStreamRate(SensorManager.SENSOR_DELAY_FASTEST);
+            setStreamTimer();
             break;
         case R.id.delay_button_submit:
             EditText rateField = (EditText) mActiveDialog.findViewById(R.id.delay_rate_field);
@@ -96,6 +102,7 @@ public class SensorClickListener implements OnClickListener {
             try {
                 int rate = Integer.parseInt(rateField.getText().toString());
                 setStreamRate(rate);
+                setStreamTimer();
             } catch (NumberFormatException e) {
                 Toast.makeText(mContext, "Invalid number entry", Toast.LENGTH_LONG).show();
             }
@@ -124,6 +131,26 @@ public class SensorClickListener implements OnClickListener {
         mContext.startActivity(intent);
     }
 
+    protected void setStreamTimer() {
+        EditText timerField = (EditText) mActiveDialog.findViewById(R.id.timer_field);
+        int millis = -1;
+
+        try {
+            millis = Integer.parseInt(timerField.getText().toString());
+        } catch (NumberFormatException e) {
+            // Invalid number entry
+        }
+
+        if (millis >= 0) {
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    setStreamRate(-1);
+                }
+            }, millis);
+        }
+    }
+
     /**
      * Sets the sensor stream rate
      * 
@@ -146,6 +173,7 @@ public class SensorClickListener implements OnClickListener {
                 return;
             }
             sensorManager.unregisterListener(ssel, sensorListItem.getSensor());
+            sensorListItem.createDataReport();
         } else {
             SensorStreamEventListener oldSSEL = sListeners.remove(sensorListItem);
             if (oldSSEL != null) {
@@ -157,7 +185,6 @@ public class SensorClickListener implements OnClickListener {
                 rate = -1;
             } else {
                 sListeners.put(sensorListItem, ssel);
-                sensorListItem.createLogWriter();
             }
             activeDialog.dismiss();
         }

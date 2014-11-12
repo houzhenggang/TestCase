@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">硬件监听器</string>
+    <string name="view_chart">查看图形</string>
+    <string name="set_listener">设置监听</string>
+    <string name="remove_listener">移除监听</string>
+    <string name="save_path_prompt">数据保存在%1$s路径下</string>
+    <string name="delay_prompt">指定事件延时(微秒):</string>
+    <string name="delay_submit">提交</string>
+    <string name="delay_cancel">取消</string>
+    <string name="timer_prompt">指定监听时间(毫秒):</string>
+
+</resources>

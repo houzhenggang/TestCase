@@ -267,7 +267,7 @@ def install():
     report.close()
 
 def main():
-    state = os.popen('adb get-state').readline().strip()
+    state = os.popen('adb get-state').readlines()[-1].strip()
     if state == 'device':
         print('Operation type choices are:')
         print('    1. monkey')

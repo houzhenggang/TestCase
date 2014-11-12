@@ -280,4 +280,22 @@ final public class SensorUtilityFunctions {
 
         return yMax;
     }
+
+    @SuppressWarnings("deprecation")
+    static public boolean isPhysicalSensor(Sensor sensor) {
+        switch (sensor.getType()) {
+        case Sensor.TYPE_ACCELEROMETER:
+        case Sensor.TYPE_MAGNETIC_FIELD:
+        case Sensor.TYPE_GYROSCOPE:
+        case Sensor.TYPE_LIGHT:
+        case Sensor.TYPE_PRESSURE:
+        case Sensor.TYPE_TEMPERATURE:
+        case Sensor.TYPE_PROXIMITY:
+        case 9836800: // TYPE_VOLLEY_GESTURE
+        case 9836801: // TYPE_HALL_DEVICE
+            return true;
+        default:
+            return false;
+        }
+    }
 }
