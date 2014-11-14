@@ -24,6 +24,8 @@
         <activity android:name=".sensor.SensorChartActivity"
             android:screenOrientation="landscape"
             android:configChanges="orientation|keyboardHidden|locale|screenSize" />
+        <activity android:name=".sensor.SensorDataStatActivity"
+            android:configChanges="orientation|keyboardHidden|locale|screenSize" />
         <activity android:name="org.achartengine.GraphicalActivity" />
     </application>
 

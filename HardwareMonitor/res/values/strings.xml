@@ -4,6 +4,7 @@
     <string name="app_name">Hardware Monitor</string>
     <string name="stream_rate">Rate: </string>
     <string name="view_chart">View Chart</string>
+    <string name="view_stat">View Stat</string>
     <string name="set_listener">Set Listener</string>
     <string name="remove_listener">Remove Listener</string>
     <string name="save_path_prompt">Save data to path %1$s</string>
@@ -17,5 +18,15 @@
     <string name="delay_submit">Submit</string>
     <string name="delay_cancel">Cancel</string>
     <string name="timer_prompt">Desired listener time (in millisecond):</string>
+    <string name="stat_x">X</string>
+    <string name="stat_y">Y</string>
+    <string name="stat_z">Z</string>
+    <string name="stat_min">Minimum</string>
+    <string name="stat_max">Maximum</string>
+    <string name="stat_ave">Average</string>
+    <string name="stat_var">Variance</string>
+    <string name="refresh">Refresh</string>
+    <string name="clear">Clear</string>
+    <string name="no_data">No data</string>
 
 </resources>

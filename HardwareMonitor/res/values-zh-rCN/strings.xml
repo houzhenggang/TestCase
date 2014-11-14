@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">硬件监听器</string>
     <string name="view_chart">查看图形</string>
+    <string name="view_stat">查看统计</string>
     <string name="set_listener">设置监听</string>
     <string name="remove_listener">移除监听</string>
     <string name="save_path_prompt">数据保存在%1$s路径下</string>
@@ -10,5 +10,12 @@
     <string name="delay_submit">提交</string>
     <string name="delay_cancel">取消</string>
     <string name="timer_prompt">指定监听时间(毫秒):</string>
+    <string name="stat_min">最小值</string>
+    <string name="stat_max">最大值</string>
+    <string name="stat_ave">平均值</string>
+    <string name="stat_var">方差</string>
+    <string name="refresh">刷新</string>
+    <string name="clear">清空</string>
+    <string name="no_data">没有数据</string>
 
 </resources>

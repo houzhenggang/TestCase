@@ -178,27 +178,71 @@ def monkey(package=None):
     output.close()
 
     output = open(os.path.join(outdir, 'monkey.txt'), 'r')
-    data = {'count': 0, 'event': 0, 'crash': 0, 'anr': 0}
+    data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
+    crashs = []
+    anrs = []
     for line in output.readlines():
         if line.startswith(':Monkey:'):
-            m = re.match(':Monkey: seed=(\d+) count=(\d+)', line)
+            m = re.search(':Monkey: seed=(\d+) count=(\d+)', line)
+            data['seed']  = m.groups()[0]
             data['count'] = m.groups()[1]
-        elif line.startswith('    // Sending event #'):
-            m = re.match('    // Sending event #(\d+)', line)
+        elif line.find('// Sending event #') > -1:
+            m = re.search('// Sending event #(\d+)', line)
             data['event'] = m.groups()[0]
+        elif line.find('//[calendar_time:') > -1:
+            m = re.search('system_uptime:(\d+)', line)
+            if 'start' in data:
+                data['time'] = int(m.groups()[0]) - data['start']
+            else:
+                data['start'] = int(m.groups()[0])
         elif line.startswith('Events injected:'):
-            m = re.match('Events injected: (\d+)', line)
+            m = re.search('Events injected: (\d+)', line)
             data['event'] = m.groups()[0]
-        elif line.startswith('// CRASH:'):
+        elif line.startswith('## Network stats:'):
+            m = re.search('elapsed time=(\d+)ms', line)
+            data['time'] = int(m.groups()[0])
+        elif line.find('// CRASH:') > -1:
             data['crash'] = data['crash'] + 1
-        elif line.startswith('// NOT RESPONDING:'):
+            crash = {'package': line.strip()[3:]}
+            crashs.append(crash)
+        elif line.startswith('// Long Msg:'):
+            ss = line.strip().split(': ')
+            crash['type'] = ss[1]
+            if len(ss) > 2:
+                crash['reason'] = ss[2]
+            else:
+                crash['reason'] = 'no cause'
+        elif line.find('// NOT RESPONDING:') > -1:
             data['anr'] = data['anr'] + 1
+            m = re.search('// (NOT RESPONDING: .+ \(pid \d+\))', line)
+            anr = {'package': m.groups()[0]}
+            anrs.append(anr)
+        elif line.startswith('Reason:'):
+            anr['reason'] = line[8:].strip()
     output.close()
 
     report = open(os.path.join(outdir, 'monkey.csv'), 'w')
     report.write(codecs.BOM_UTF8)
-    report.write('预期次数,实际次数,CRASH次数,ANR次数\n')
-    report.write('{0},{1},{2},{3}\n'.format(data['count'], data['event'], data['crash'], data['anr']))
+    report.write('测试的随机数{0},预期测试次数{1},实际次数{2},测试时间{3},CRASH次数{4},NOT RESPONDING次数{5}\n'.format(data['seed'],
+            data['count'], data['event'], round(data['time'] / 3600000.0, 2), data['crash'], data['anr']))
+    report.write('异常的模块名,异常的类型,异常的原因,不响应的模块名,不响应的原因,异常的模块名不带PID用于汇总,不响应的模块名不带PID用于汇总\n')
+    for i in range(max(len(crashs), len(anrs))):
+        if i < len(crashs):
+            crash_package = crashs[i]['package']
+            crash_type = crashs[i].get('type', '')
+            crash_reason = crashs[i].get('reason', '')
+        else:
+            crash_package = ''
+            crash_type = ''
+            crash_reason = ''
+        if i < len(anrs):
+            anr_package = anrs[i]['package']
+            anr_reason = anrs[i].get('reason', '')
+        else:
+            anr_package = ''
+            anr_reason = ''
+        report.write('{0},{1},\"{2}\",{3},\"{4}\",{5},{6}\n'.format(crash_package, crash_type, crash_reason, anr_package, anr_reason,
+                crash_package.split(' (')[0], anr_package.split(' (')[0]))
     report.close()
 
     while True:
@@ -321,7 +365,7 @@ def main():
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
                 t1 = DumpsysMeminfoThread(package, 20, outdir)
-                t2 = DumpsysGfxinfoThread(package, 10, outdir)
+                t2 = DumpsysGfxinfoThread(package, 5, outdir)
                 threads.append(t1)
                 threads.append(t2)
                 t1.start()
@@ -341,7 +385,7 @@ def main():
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
                 t1 = DumpsysMeminfoThread(package, 20, outdir)
-                t2 = DumpsysGfxinfoThread(package, 10, outdir)
+                t2 = DumpsysGfxinfoThread(package, 5, outdir)
                 t3 = DumpsysCpuinfoThread(package, 10, outdir)
                 t1.start()
                 t2.start()

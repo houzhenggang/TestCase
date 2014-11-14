@@ -9,6 +9,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
         android:shadowColor="#00FF00"
         android:shadowRadius="1"
         android:textAppearance="?android:attr/textAppearanceMedium" />
@@ -18,7 +19,9 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/sensor_title"
         android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
         android:baselineAligned="false">
         <LinearLayout android:id="@+id/data_container"
             android:layout_width="0dip"
@@ -41,6 +44,11 @@
             android:layout_height="match_parent"
             android:layout_weight="0.40"
             android:orientation="vertical">
+            <Button android:id="@+id/view_stat_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:text="@string/view_stat" />
             <Button android:id="@+id/set_listener_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

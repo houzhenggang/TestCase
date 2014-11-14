@@ -72,6 +72,9 @@ public class SensorClickListener implements OnClickListener {
         case R.id.view_chart_button:
             viewSensorDataChart();
             break;
+        case R.id.view_stat_button:
+            viewSensorDataStat();
+            break;
         case R.id.set_listener_button:
             mActiveDialog = new SensorStreamRateDialog(mContext, this,
                     mSensorListItem.getStreamRate());
@@ -131,6 +134,13 @@ public class SensorClickListener implements OnClickListener {
         mContext.startActivity(intent);
     }
 
+    protected void viewSensorDataStat() {
+        Intent intent = new Intent(mContext, SensorDataStatActivity.class);
+        intent.putExtra("title", mSensorListItem.getSensorName());
+        intent.putExtra("type", mSensorListItem.getSensorType());
+        mContext.startActivity(intent);
+    }
+
     protected void setStreamTimer() {
         EditText timerField = (EditText) mActiveDialog.findViewById(R.id.timer_field);
         int millis = -1;
@@ -173,7 +183,7 @@ public class SensorClickListener implements OnClickListener {
                 return;
             }
             sensorManager.unregisterListener(ssel, sensorListItem.getSensor());
-            sensorListItem.createDataReport();
+            sensorListItem.closeLogWriter();
         } else {
             SensorStreamEventListener oldSSEL = sListeners.remove(sensorListItem);
             if (oldSSEL != null) {
@@ -185,6 +195,7 @@ public class SensorClickListener implements OnClickListener {
                 rate = -1;
             } else {
                 sListeners.put(sensorListItem, ssel);
+                sensorListItem.createLogWriter();
             }
             activeDialog.dismiss();
         }

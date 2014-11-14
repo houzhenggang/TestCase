@@ -42,6 +42,9 @@ public class SensorListItemView extends LinearLayout implements OnClickListener 
         Button viewChartButton = (Button) mChildView.findViewById(R.id.view_chart_button);
         viewChartButton.setOnClickListener(new SensorClickListener(context, listItem, this));
 
+        Button viewStatButton = (Button) mChildView.findViewById(R.id.view_stat_button);
+        viewStatButton.setOnClickListener(new SensorClickListener(context, listItem, this));
+
         Button setListenerButton = (Button) mChildView.findViewById(R.id.set_listener_button);
         setListenerButton.setOnClickListener(new SensorClickListener(context, listItem, this));
 

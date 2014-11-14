@@ -53,40 +53,29 @@ public class SensorListItem {
     private int mAccuracy;
     // When the past several updates were received
     private LinkedList<Date> mRcvTimes;
+    // Log writer
+    private BufferedWriter mLogWriter;
 
-    private List<Float> mData0List = new ArrayList<Float>();
-    private List<Float> mData1List = new ArrayList<Float>();
-    private List<Float> mData2List = new ArrayList<Float>();
-    private List<Integer> mAccuracyList = new ArrayList<Integer>();
-    private List<Long> mTimestampList = new ArrayList<Long>();
-
-    private double[] statData(Float[] array) {
-        if (array == null || array.length == 0) {
-            return new double[] { 0, 0, 0, 0 };
-        } else {
-            double sum = 0, min = array[0], max = array[0], ave;
-    
-            for (int i = 0; i < array.length; i++) {
-                if (array[i] < min) {
-                    min = array[i];
-                } else if (array[i] > max) {
-                    max = array[i];
-                }
-                sum += array[i];
+    /**
+     * @param text String to be written into the log file.
+     * 
+     * Log file name is determined by database property, and will be located
+     * within the device's downloads folder.
+     */
+    private synchronized void writeToLogFile(String text) {
+        try {
+            if (mLogWriter != null) {
+                mLogWriter.write(text);
+                mLogWriter.flush();
             }
-            ave = sum / array.length;
-
-            double varsum = 0, var;
-            for (int i = 0; i < array.length; i++) {
-                varsum += (array[i] - ave) * (array[i] - ave);
-            }
-            var = varsum / array.length;
-
-            return new double[] { min, max, ave, var };
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    public void createDataReport() {
+    public void createLogWriter() {
+        int logFileBufferSize = 100;
+
         File dir = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS), SensorUtilityFunctions.TAG);
         dir.mkdir();
@@ -94,22 +83,19 @@ public class SensorListItem {
         File logFile = new File(dir, getSensorType() + "_" + System.currentTimeMillis() + ".csv");
         try {
             FileWriter fstream = new FileWriter(logFile, false);
-            BufferedWriter logWriter = new BufferedWriter(fstream, 100);
-            logWriter.write("X,Y,Z,ACCURACY,TIMESTAMP\n");
-            for (int i = 0; i < mData0List.size(); i++) {
-                logWriter.write(mData0List.get(i) + "," + mData1List.get(i) + ","
-                        + mData2List.get(i) + "," + mAccuracyList.get(i) + ","
-                        + mTimestampList.get(i) + "\n");
+            mLogWriter = new BufferedWriter(fstream, logFileBufferSize);
+            mLogWriter.write("X,Y,Z,ACCURACY,TIMESTAMP\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void closeLogWriter() {
+        try {
+            if (mLogWriter != null) {
+                mLogWriter.close();
+                mLogWriter = null;
             }
-            logWriter.newLine();
-            logWriter.write(",Min.,Max.,Ave.,Var.\n");
-            double[] xxx = statData(mData0List.toArray(new Float[mData0List.size()]));
-            logWriter.write("X," + xxx[0] + "," + xxx[1] + "," + xxx[2] + "," + xxx[3] + "\n");
-            double[] yyy = statData(mData1List.toArray(new Float[mData1List.size()]));
-            logWriter.write("Y," + yyy[0] + "," + yyy[1] + "," + yyy[2] + "," + yyy[3] + "\n");
-            double[] zzz = statData(mData2List.toArray(new Float[mData2List.size()]));
-            logWriter.write("Z," + zzz[0] + "," + zzz[1] + "," + zzz[2] + "," + zzz[3] + "\n");
-            logWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -198,11 +184,7 @@ public class SensorListItem {
             mRcvTimes.removeLast();
         }
 
-        mData0List.add(data0);
-        mData1List.add(data1);
-        mData2List.add(data2);
-        mAccuracyList.add(accuracy);
-        mTimestampList.add(timestamp);
+        writeToLogFile(data0 + "," + data1 + "," + data2 + "," + accuracy + "," + timestamp + "\n");
     }
 
     public void setStreamRate(int streamRate) {
