@@ -98,6 +98,25 @@ class DumpsysGfxinfoThread(threading.Thread):
     def stop(self):
         self.loop = False
 
+class DumpsysGfxinfoThread1(threading.Thread):
+
+    def __init__(self, package, outdir):
+        threading.Thread.__init__(self)
+        self.package = package
+        self.outdir = outdir
+        self.loop = True
+
+    def run(self):
+        p = subprocess.Popen('', shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while self.loop:
+            line = p.stdout.readline()
+            if not line:
+                break
+            print(line)
+
+    def stop(self):
+        self.loop = False
+
 class DumpsysCpuinfoThread(threading.Thread):
 
     def __init__(self, package, interval, outdir):
@@ -266,6 +285,10 @@ def reboot():
     report.close()
 
 def install():
+    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'sjzs.apk'))).readlines()
+    os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDisableDownloadAppAutoInstall').readlines()
+    os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDownloadTop10Apk').readlines()
+
     os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
     time.sleep(3)
 
@@ -273,9 +296,8 @@ def install():
     report.write(codecs.BOM_UTF8)
     report.write('应用文件名,安装,启动,卸载,异常1,异常2,异常3\n')
 
-    pattern = os.path.join(os.path.join(workdir, 'TOP10APK'), '*.apk')
-    for filename in glob.glob(pattern):
-        lines = os.popen('adb install -r \"{0}\"'.format(filename)).readlines()
+    for filename in os.popen('adb shell ls /sdcard/360Download/*.apk').readlines():
+        lines = os.popen('adb shell pm install -r \"{0}\"'.format(filename.strip())).readlines()
         install = 'Success' in [line.strip() for line in lines]
         launch = True
         except1 = crash = anr = except2 = None
@@ -304,7 +326,7 @@ def install():
             except1 = lines[-1].strip()
             launch = False
 
-        report.write('{0},{1},{2},{3},{4}\n'.format(os.path.basename(filename), 'Pass' if install else 'Fail',
+        report.write('{0},{1},{2},{3},{4}\n'.format(os.path.basename(filename.strip()), 'Pass' if install else 'Fail',
                 'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail', except1 if except1 else '',
                 crash if crash else anr if anr else '', except2 if except2 else ''))
         report.flush()
@@ -349,9 +371,9 @@ def main():
         time.sleep(3)
         jobj = eval(os.popen('adb shell cat /data/data/com.ztemt.test.common/files/launcher').readline())
 
-        os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'SettingsTest.apk'))).readlines()
-        os.popen('adb shell am instrument -w -e class com.android.settings.test.DevelopmentSettingsTestCase#testTrackFrameTimeIsDumpsysGfxinfo '
-                'com.android.settings.test/com.google.android.apps.common.testing.testrunner.GoogleInstrumentationTestRunner').readlines()
+        os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'automator.jar'))).readlines()
+        os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn').readlines()
+        os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo').readlines()
 
         packages = [line[8:].strip() for line in os.popen('adb shell pm list package -s').readlines()]
         packages = [package for package in packages if package in jobj]
@@ -404,7 +426,6 @@ def main():
         reboot()
 
         os.popen('adb uninstall com.ztemt.test.common').readlines()
-        os.popen('adb uninstall com.android.settings.test').readlines()
     else:
         print('Please connect your device')
 
