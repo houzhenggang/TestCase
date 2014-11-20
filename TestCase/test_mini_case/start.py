@@ -188,14 +188,19 @@ def monkey(package=None):
     else:
         outdir = workout
 
-    output = open(os.path.join(outdir, 'monkey.txt'), 'w+')
+    os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'monkey.sh'))).readlines()
     if package:
-        command = 'adb shell monkey -p {0} -s 10 --throttle 100 --ignore-timeouts --ignore-crashes -v 50000'.format(package)
+        os.system('adb shell sh /data/local/tmp/monkey.sh {0}'.format(package))
     else:
-        command = 'adb shell monkey -s 10 --throttle 100 --ignore-timeouts --ignore-crashes -v 500000'
-    subprocess.Popen(command, shell=True, stdout=output, stderr=output).wait()
-    output.close()
+        os.system('adb shell sh /data/local/tmp/monkey.sh')
 
+    while True:
+        os.system('adb wait-for-device')
+        if not os.popen('adb shell ps | grep com.android.commands.monkey').readline().strip():
+            break
+        time.sleep(20)
+
+    os.popen('adb pull /data/local/tmp/monkey.txt \"{0}\"'.format(outdir)).readlines()
     output = open(os.path.join(outdir, 'monkey.txt'), 'r')
     data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
     crashs = []
@@ -264,12 +269,6 @@ def monkey(package=None):
                 crash_package.split(' (')[0], anr_package.split(' (')[0]))
     report.close()
 
-    while True:
-        os.system('adb wait-for-device')
-        if not os.popen('adb shell ps | grep com.android.commands.monkey').readline().strip():
-            break
-        time.sleep(3)
-
 def reboot():
     os.system('adb reboot')
     os.system('adb wait-for-device')
@@ -285,9 +284,12 @@ def reboot():
     report.close()
 
 def install():
-    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'sjzs.apk'))).readlines()
-    os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDisableDownloadAppAutoInstall').readlines()
-    os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDownloadTop10Apk').readlines()
+    #os.popen('adb uninstall com.qihoo.appstore').readlines()
+    #os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'sjzs.apk'))).readlines()
+    #os.popen('adb shell rm /sdcard/360Download/*.apk*').readlines()
+    #os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDisableDownloadAppAutoInstall').readlines()
+    #os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDisableDeleteDownfile').readlines()
+    #os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDownloadTop10Apk').readlines()
 
     os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
     time.sleep(3)
@@ -296,8 +298,12 @@ def install():
     report.write(codecs.BOM_UTF8)
     report.write('应用文件名,安装,启动,卸载,异常1,异常2,异常3\n')
 
-    for filename in os.popen('adb shell ls /sdcard/360Download/*.apk').readlines():
-        lines = os.popen('adb shell pm install -r \"{0}\"'.format(filename.strip())).readlines()
+    topapkpath = open(os.path.join(workdir, 'config.txt'), 'r').readline()
+    pattern = os.path.join(unicode(topapkpath, 'utf-8'), '*.apk')
+    #for filename in [x.strip() for x in os.popen('adb shell ls /sdcard/360Download/*.apk').readlines() if x.find('*.apk') == -1]:
+    for filename in [x.encode('GB2312') for x in glob.glob(pattern)]:
+        #lines = os.popen('adb shell pm install -r \"{0}\"'.format(filename)).readlines()
+        lines = os.popen('adb install -r \"{0}\"'.format(filename)).readlines()
         install = 'Success' in [line.strip() for line in lines]
         launch = True
         except1 = crash = anr = except2 = None
@@ -326,7 +332,7 @@ def install():
             except1 = lines[-1].strip()
             launch = False
 
-        report.write('{0},{1},{2},{3},{4}\n'.format(os.path.basename(filename.strip()), 'Pass' if install else 'Fail',
+        report.write('{0},{1},{2},{3},{4}\n'.format(os.path.basename(filename), 'Pass' if install else 'Fail',
                 'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail', except1 if except1 else '',
                 crash if crash else anr if anr else '', except2 if except2 else ''))
         report.flush()
