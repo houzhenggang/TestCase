@@ -98,25 +98,6 @@ class DumpsysGfxinfoThread(threading.Thread):
     def stop(self):
         self.loop = False
 
-class DumpsysGfxinfoThread1(threading.Thread):
-
-    def __init__(self, package, outdir):
-        threading.Thread.__init__(self)
-        self.package = package
-        self.outdir = outdir
-        self.loop = True
-
-    def run(self):
-        p = subprocess.Popen('', shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        while self.loop:
-            line = p.stdout.readline()
-            if not line:
-                break
-            print(line)
-
-    def stop(self):
-        self.loop = False
-
 class DumpsysCpuinfoThread(threading.Thread):
 
     def __init__(self, package, interval, outdir):
@@ -142,6 +123,40 @@ class DumpsysCpuinfoThread(threading.Thread):
 
     def stop(self):
         self.loop = False
+
+class LogcatGfxinfoThread(threading.Thread):
+
+    def __init__(self, outdir):
+        threading.Thread.__init__(self)
+        self.outdir = outdir
+
+    def run(self):
+        os.system('adb logcat -c')
+        output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
+        self.p = subprocess.Popen('adb logcat -v time -s HardwareRenderer:D I:s',
+                shell=True, stdout=output, stderr=output)
+        self.p.wait()
+        output.close()
+
+    def stop(self):
+        self.p.terminate()
+
+class LogcatSkpinfoThread(threading.Thread):
+
+    def __init__(self, outdir):
+        threading.Thread.__init__(self)
+        self.outdir = outdir
+
+    def run(self):
+        os.system('adb logcat -c')
+        output = open(os.path.join(self.outdir, 'skpinfo.txt'), 'w')
+        self.p = subprocess.Popen('adb logcat -v time -s Choreographer:I I:s',
+                shell=True, stdout=output, stderr=output)
+        self.p.wait()
+        output.close()
+
+    def stop(self):
+        self.p.terminate()
 
 def startActivity(packageName, activityName, clearTask):
     cmd = 'adb shell am start --user 0 -W {2} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {0}/{1}'.format(
@@ -269,6 +284,58 @@ def monkey(package=None):
                 crash_package.split(' (')[0], anr_package.split(' (')[0]))
     report.close()
 
+def getSceneInfo(name):
+    outdir = os.path.join(workout, name)
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    t1 = LogcatGfxinfoThread(outdir)
+    t2 = LogcatSkpinfoThread(outdir)
+    t1.start()
+    t2.start()
+    subprocess.Popen('adb shell uiautomator runtest scenes.jar -c cn.nubia.test.{0}'.format(name),
+            shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
+    t1.stop()
+    t2.stop()
+    t1.join()
+    t2.join()
+
+def scenes():
+    # copy picture files
+    os.popen('adb shell mkdir -p /sdcard/Pictures').readline()
+    picturesdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[5].strip()
+    os.popen('adb push \"{0}\" /sdcard/Pictures'.format(unicode(picturesdir, 'utf-8').encode('GB2312'))).readlines()
+
+    # copy pim files
+    os.popen('adb shell rm -rf /sdcard/nubia/PIM/*').readline()
+    os.popen('adb shell mkdir -p /sdcard/nubia/PIM').readline()
+    pimdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[3].strip()
+    for filename in glob.glob(os.path.join(unicode(pimdir, 'utf-8'), '*')):
+        realname = filename.encode('GB2312')
+        if os.path.isdir(filename):
+            os.popen('adb shell mkdir /sdcard/nubia/PIM/{0}'.format(os.path.basename(filename))).readline()
+            os.popen('adb push \"{0}\" /sdcard/nubia/PIM/{1}'.format(realname, os.path.basename(filename))).readlines()
+        elif os.path.isfile(filename):
+            os.popen('adb push \"{0}\" /sdcard/nubia/PIM'.format(realname)).readlines()
+
+    # restore the backup
+    os.popen('adb shell am force-stop cn.nubia.databackup').readline()
+    os.popen('adb shell uiautomator runtest automator.jar -c cn.nubia.databackup.RestoreTestCase#testRestore').readlines()
+
+    # install ApiDemos
+    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'ApiDemos.apk'))).readlines()
+
+    # get scene info
+    os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'scenes.jar'))).readlines()
+    getSceneInfo('NativeListViewTest')
+    getSceneInfo('ContactTest')
+    getSceneInfo('DeveloperTest')
+    getSceneInfo('GalleryTest')
+    getSceneInfo('MultiTaskTest')
+    getSceneInfo('BrowserTest')
+    getSceneInfo('NoteScaleTest')
+    getSceneInfo('LauncherTest')
+    getSceneInfo('PressMenuTest')
+
 def reboot():
     os.system('adb reboot')
     os.system('adb wait-for-device')
@@ -283,14 +350,7 @@ def reboot():
     report.write('{0:0.3f}\n'.format(uptime + 2))
     report.close()
 
-def install():
-    #os.popen('adb uninstall com.qihoo.appstore').readlines()
-    #os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'sjzs.apk'))).readlines()
-    #os.popen('adb shell rm /sdcard/360Download/*.apk*').readlines()
-    #os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDisableDownloadAppAutoInstall').readlines()
-    #os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDisableDeleteDownfile').readlines()
-    #os.popen('adb shell uiautomator runtest automator.jar -c com.qihoo.appstore.QihooAppstoreTestCase#testDownloadTop10Apk').readlines()
-
+def install(sdcard):
     os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
     time.sleep(3)
 
@@ -298,12 +358,10 @@ def install():
     report.write(codecs.BOM_UTF8)
     report.write('应用文件名,安装,启动,卸载,异常1,异常2,异常3\n')
 
-    topapkpath = open(os.path.join(workdir, 'config.txt'), 'r').readline()
-    pattern = os.path.join(unicode(topapkpath, 'utf-8'), '*.apk')
-    #for filename in [x.strip() for x in os.popen('adb shell ls /sdcard/360Download/*.apk').readlines() if x.find('*.apk') == -1]:
+    topapkdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
+    pattern = os.path.join(unicode(topapkdir, 'utf-8'), '*.apk')
     for filename in [x.encode('GB2312') for x in glob.glob(pattern)]:
-        #lines = os.popen('adb shell pm install -r \"{0}\"'.format(filename)).readlines()
-        lines = os.popen('adb install -r \"{0}\"'.format(filename)).readlines()
+        lines = os.popen('adb install {0} -d -r \"{1}\"'.format('-s' if sdcard else '', filename)).readlines()
         install = 'Success' in [line.strip() for line in lines]
         launch = True
         except1 = crash = anr = except2 = None
@@ -344,11 +402,21 @@ def main():
         print('Operation type choices are:')
         print('    1. monkey')
         print('    2. single')
-        print('    3. manual')
+        print('    3. scenes')
         try:
             operation = input('\nWhich would you like? [1] ')
         except SyntaxError:
             operation = 1
+        except NameError:
+            sys.exit(2)
+
+        print('\nInstall location choices are:')
+        print('    1. internal storage')
+        print('    2. sdcard')
+        try:
+            location = input('\nWhich would you like? [1] ')
+        except SyntaxError:
+            location = 1
         except NameError:
             sys.exit(2)
 
@@ -360,7 +428,7 @@ def main():
         elif operation == 2:
             workout = os.path.join(workout, 'single')
         elif operation == 3:
-            workout = os.path.join(workout, 'manual')
+            workout = os.path.join(workout, 'scenes')
         else:
             sys.exit(2)
         if not os.path.exists(workout):
@@ -393,7 +461,7 @@ def main():
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
                 t1 = DumpsysMeminfoThread(package, 20, outdir)
-                t2 = DumpsysGfxinfoThread(package, 5, outdir)
+                t2 = DumpsysGfxinfoThread(package,  5, outdir)
                 threads.append(t1)
                 threads.append(t2)
                 t1.start()
@@ -407,28 +475,28 @@ def main():
             for t in threads:
                 t.join()
             t3.join()
-        elif operation == 2 or operation == 3:
+        elif operation == 2:
             for package in packages:
                 outdir = os.path.join(workout, package)
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
                 t1 = DumpsysMeminfoThread(package, 20, outdir)
-                t2 = DumpsysGfxinfoThread(package, 5, outdir)
+                t2 = DumpsysGfxinfoThread(package,  5, outdir)
                 t3 = DumpsysCpuinfoThread(package, 10, outdir)
                 t1.start()
                 t2.start()
                 t3.start()
-                if operation == 2:
-                    monkey(package)
-                elif operation == 3:
-                    raw_input('\nEnter manual mode, press key ENTER to exit [{0}]'.format(package))
+                monkey(package)
                 t1.stop()
                 t2.stop()
                 t3.stop()
                 t1.join()
                 t2.join()
                 t3.join()
-        install()
+        elif operation == 3:
+            scenes()
+
+        install(location == 2)
         reboot()
 
         os.popen('adb uninstall com.ztemt.test.common').readlines()
