@@ -134,9 +134,40 @@ class LogcatGfxinfoThread(threading.Thread):
         os.system('adb logcat -c')
         output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
         self.p = subprocess.Popen('adb logcat -v time -s HardwareRenderer:D I:s',
-                shell=True, stdout=output, stderr=output)
+                shell=False, stdout=output, stderr=output)
         self.p.wait()
         output.close()
+
+        output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'r')
+        gfxinfo = []
+        for line in output.readlines():
+            m = re.search('\((\d+)\): gfxinfo\[(\d+)\+?(\d?)\]=\S+=(\d+\.\d+)', line)
+            if m:
+                g = m.groups()
+                gfxinfo.append((int(g[0]), int(g[1]), int(g[2]) if g[2] else 0, float(g[3])))
+        output.close()
+
+        data = {}
+        gfxinfo = sorted(gfxinfo)
+        pids = set([i[0] for i in gfxinfo])
+        for pid in pids:
+            m = max([i[1] for i in gfxinfo if i[0] == pid])
+            item = [[0 for i in range(3)] for i in range(m + 1)]
+            for i in [i for i in gfxinfo if i[0] == pid]:
+                item[i[1]][i[2]] = i[3]
+            data[pid] = item
+
+        report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'w')
+        report.write(codecs.BOM_UTF8)
+        report.write('PID,ID,Draw,Process,Execute,Total\n')
+        for pid in data:
+            i = 0
+            for item in data[pid]:
+                if any(item):
+                    report.write('{0},{1},{2},{3},{4},{5}\n'.format(pid, i, item[0] if item[0] else '',
+                            item[1] if item[1] else '', item[2] if item[2] else '', sum(item)))
+                i += 1
+        report.close()
 
     def stop(self):
         self.p.terminate()
@@ -151,9 +182,28 @@ class LogcatSkpinfoThread(threading.Thread):
         os.system('adb logcat -c')
         output = open(os.path.join(self.outdir, 'skpinfo.txt'), 'w')
         self.p = subprocess.Popen('adb logcat -v time -s Choreographer:I I:s',
-                shell=True, stdout=output, stderr=output)
+                shell=False, stdout=output, stderr=output)
         self.p.wait()
         output.close()
+
+        output = open(os.path.join(self.outdir, 'skpinfo.txt'), 'r')
+        stat = {}
+        for line in output.readlines():
+            m = re.search('Skipped (\d+) frames!', line)
+            if m:
+                c = int(m.groups()[0])
+                stat.setdefault(c, 0)
+                stat[c] += 1
+        output.close()
+
+        report = open(os.path.join(self.outdir, 'skpinfo.csv'), 'w')
+        report.write(codecs.BOM_UTF8)
+        report.write('丢帧数量,出现次数\n')
+        if len(stat) > 0:
+            for key in sorted(stat.keys(), reverse=True):
+                report.write('{0},{1}\n'.format(key, stat[key]))
+            report.write(',{0}\n'.format(sum(stat.values())))
+        report.close()
 
     def stop(self):
         self.p.terminate()
