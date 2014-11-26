@@ -98,32 +98,6 @@ class DumpsysGfxinfoThread(threading.Thread):
     def stop(self):
         self.loop = False
 
-class DumpsysCpuinfoThread(threading.Thread):
-
-    def __init__(self, package, interval, outdir):
-        threading.Thread.__init__(self)
-        self.package = package
-        self.interval = interval
-        self.outdir = outdir
-        self.loop = True
-
-    def run(self):
-        report = open(os.path.join(self.outdir if self.package else workout, 'cpuinfo.csv'), 'w')
-        report.write(codecs.BOM_UTF8)
-        report.write('当前频率,当前温度\n')
-        report.flush()
-        while self.loop:
-            time.sleep(self.interval)
-            curfreq = os.popen('adb shell cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq').readline().strip()
-            curtemp = os.popen('adb shell cat /sys/class/thermal/thermal_zone0/temp').readline().strip()
-            if curfreq and curtemp:
-                report.write('{0},{1}\n'.format(curfreq, curtemp))
-                report.flush()
-        report.close()
-
-    def stop(self):
-        self.loop = False
-
 class LogcatGfxinfoThread(threading.Thread):
 
     def __init__(self, outdir):
@@ -131,20 +105,20 @@ class LogcatGfxinfoThread(threading.Thread):
         self.outdir = outdir
 
     def run(self):
+        gfxinfo = []
         os.system('adb logcat -c')
         output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
         self.p = subprocess.Popen('adb logcat -v time -s HardwareRenderer:D I:s',
-                shell=False, stdout=output, stderr=output)
-        self.p.wait()
-        output.close()
-
-        output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'r')
-        gfxinfo = []
-        for line in output.readlines():
-            m = re.search('\((\d+)\): gfxinfo\[(\d+)\+?(\d?)\]=\S+=(\d+\.\d+)', line)
+                shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while True:
+            line = self.p.stdout.readline()
+            if not line:
+                break
+            m = re.search('\(\s*(\d+)\): gfxinfo\[(\d+)\+?(\d?)\]=\S+=(\d+\.\d+)', line)
             if m:
                 g = m.groups()
                 gfxinfo.append((int(g[0]), int(g[1]), int(g[2]) if g[2] else 0, float(g[3])))
+                output.write(line)
         output.close()
 
         data = {}
@@ -179,21 +153,23 @@ class LogcatSkpinfoThread(threading.Thread):
         self.outdir = outdir
 
     def run(self):
+        stat = {}
         os.system('adb logcat -c')
         output = open(os.path.join(self.outdir, 'skpinfo.txt'), 'w')
         self.p = subprocess.Popen('adb logcat -v time -s Choreographer:I I:s',
-                shell=False, stdout=output, stderr=output)
-        self.p.wait()
-        output.close()
-
-        output = open(os.path.join(self.outdir, 'skpinfo.txt'), 'r')
-        stat = {}
-        for line in output.readlines():
-            m = re.search('Skipped (\d+) frames!', line)
+                shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while True:
+            line = self.p.stdout.readline()
+            if not line:
+                break
+            m = re.search('(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}).*Skipped (\d+) frames!', line)
             if m:
-                c = int(m.groups()[0])
+                screenshot(os.path.join(self.outdir, '{0}.png'.format('-'.join(m.groups()[0].split(':')))))
+                c = int(m.groups()[1])
                 stat.setdefault(c, 0)
                 stat[c] += 1
+                output.write(line)
+                output.flush()
         output.close()
 
         report = open(os.path.join(self.outdir, 'skpinfo.csv'), 'w')
@@ -205,10 +181,24 @@ class LogcatSkpinfoThread(threading.Thread):
             report.write(',{0}\n'.format(sum(stat.values())))
         report.close()
 
+        # save to rank board
+        file = os.path.join(os.path.dirname(self.outdir), 'skpinfo.csv')
+        if os.path.exists(file):
+            report = open(file, 'a+')
+        else:
+            report = open(file, 'w')
+            report.write(codecs.BOM_UTF8)
+            report.write('Item,Total\n')
+        report.write('{0},{1}\n'.format(os.path.basename(self.outdir), sum(stat.values())))
+        report.close()
+
     def stop(self):
         self.p.terminate()
 
-def startActivity(packageName, activityName, clearTask):
+def screenshot(file):
+    os.system('adb shell screencap -p | sed "s/\\r$//" > \"{0}\"'.format(file))
+
+def startactivity(packageName, activityName, clearTask):
     cmd = 'adb shell am start --user 0 -W {2} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {0}/{1}'.format(
             packageName, activityName, '--activity-clear-task' if clearTask else '')
     lines = os.popen(cmd).readlines()
@@ -217,14 +207,14 @@ def startActivity(packageName, activityName, clearTask):
             return int(line[10:])
     return 0
 
-def getAppsInfo(package, title, activity):
+def starttime(package, title, activity):
     os.system('adb shell am force-stop {0}'.format(package))
-    t1 = startActivity(package, activity, False)
-    t2 = startActivity(package, activity, True)
-    t3 = startActivity(package, activity, True)
-    t4 = startActivity(package, activity, True)
-    t5 = startActivity(package, activity, True)
-    t6 = startActivity(package, activity, True)
+    t1 = startactivity(package, activity, False)
+    t2 = startactivity(package, activity, True)
+    t3 = startactivity(package, activity, True)
+    t4 = startactivity(package, activity, True)
+    t5 = startactivity(package, activity, True)
+    t6 = startactivity(package, activity, True)
     os.system('adb shell am force-stop {0}'.format(package))
     t = (t1, t2, t3, t4, t5, t6)
 
@@ -233,7 +223,7 @@ def getAppsInfo(package, title, activity):
     m = re.search('\s+(\d+)\s+', line)
     size = m.groups()[0] if m else '0'
 
-    path = os.path.join(workout, 'appsinfo.csv')
+    path = os.path.join(workout, 'launch.csv')
     if not os.path.exists(path):
         output = open(path, 'w')
         output.write(codecs.BOM_UTF8)
@@ -245,13 +235,13 @@ def getAppsInfo(package, title, activity):
             title, size, t, min(t[1:]), max(t[1:]), round(float(sum(t[1:])) / (len(t) - 1), 1)))
     output.close()
 
-def monkey(package=None):
+def monkey(pardir, package=None):
     if package:
-        outdir = os.path.join(workout, package)
+        outdir = os.path.join(pardir, package)
         if not os.path.exists(outdir):
             os.mkdir(outdir)
     else:
-        outdir = workout
+        outdir = pardir
 
     os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'monkey.sh'))).readlines()
     if package:
@@ -334,8 +324,11 @@ def monkey(package=None):
                 crash_package.split(' (')[0], anr_package.split(' (')[0]))
     report.close()
 
-def getSceneInfo(name):
-    outdir = os.path.join(workout, name)
+def scene(name):
+    outdir = os.path.join(workout, 'scenes')
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    outdir = os.path.join(outdir, name)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     t1 = LogcatGfxinfoThread(outdir)
@@ -376,17 +369,17 @@ def scenes():
 
     # get scene info
     os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'scenes.jar'))).readlines()
-    getSceneInfo('NativeListViewTest')
-    getSceneInfo('ContactTest')
-    getSceneInfo('DeveloperTest')
-    getSceneInfo('GalleryTest')
-    getSceneInfo('MultiTaskTest')
-    getSceneInfo('BrowserTest')
-    getSceneInfo('NoteScaleTest')
-    getSceneInfo('LauncherTest')
-    getSceneInfo('PressMenuTest')
+    scene('NativeListViewTest')
+    scene('ContactTest')
+    scene('DeveloperTest')
+    scene('GalleryTest')
+    scene('MultiTaskTest')
+    scene('BrowserTest')
+    scene('NoteScaleTest')
+    scene('LauncherTest')
+    scene('PressMenuTest')
 
-def reboot():
+def uptime():
     os.system('adb reboot')
     os.system('adb wait-for-device')
     while os.popen('adb shell getprop sys.boot_completed').readline().strip() != '1':
@@ -394,96 +387,91 @@ def reboot():
     m = re.search('up time: (\d+):(\d{2}):(\d{2})', os.popen('adb shell uptime').readline())
     uptime = int(m.groups()[0]) * 3600 + int(m.groups()[1]) * 60 + int(m.groups()[2])
 
-    report = open(os.path.join(workout, 'reboot.csv'), 'w')
+    report = open(os.path.join(workout, 'uptime.csv'), 'w')
     report.write(codecs.BOM_UTF8)
     report.write('开机时间\n')
     report.write('{0:0.3f}\n'.format(uptime + 2))
     report.close()
 
-def install(sdcard):
+def compat():
     os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
     time.sleep(3)
 
-    report = open(os.path.join(workout, 'install.csv'), 'w')
+    report = open(os.path.join(workout, 'compat.csv'), 'w')
     report.write(codecs.BOM_UTF8)
-    report.write('应用文件名,安装,启动,卸载,异常1,异常2,异常3\n')
+    report.write('应用文件名,安装i,启动i,卸载i,安装s,启动s,卸载s,异常i-1,异常i-2,异常i-3,异常s-1,异常s-2,异常s-3\n')
 
     topapkdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
-    pattern = os.path.join(unicode(topapkdir, 'utf-8'), '*.apk')
-    for filename in [x.encode('GB2312') for x in glob.glob(pattern)]:
-        lines = os.popen('adb install {0} -d -r \"{1}\"'.format('-s' if sdcard else '', filename)).readlines()
-        install = 'Success' in [line.strip() for line in lines]
-        launch = True
-        except1 = crash = anr = except2 = None
-        uninstall = False
-        if install:
-            time.sleep(3)
-            package = os.popen('adb shell cat /data/data/com.ztemt.test.common/files/package').readline()
-            lines = os.popen('adb shell monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package)).readlines()
-            for line in lines:
-                if line.startswith('// CRASH: {0}'.format(package)):
-                    launch = False
-                elif not launch and line.startswith('// Long Msg:'):
-                    crash = 'CRASH: {0}'.format(line[13:].strip())
-                    break
-                elif line.startswith('// NOT RESPONDING: {0}'.format(package)):
-                    launch = False
-                elif not launch and line.startswith('Reason:'):
-                    anr = 'ANR: {0}'.format(line[8:].strip())
-                    break
-            time.sleep(3)
-            lines = os.popen('adb uninstall {0}'.format(package)).readlines()
-            uninstall = 'Success' in [line.strip() for line in lines]
-            if not uninstall:
-                except2 = lines[-1].strip()
-        else:
-            except1 = lines[-1].strip()
-            launch = False
-
-        report.write('{0},{1},{2},{3},{4}\n'.format(os.path.basename(filename), 'Pass' if install else 'Fail',
-                'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail', except1 if except1 else '',
-                crash if crash else anr if anr else '', except2 if except2 else ''))
+    for filename in [x.encode('GB2312') for x in glob.glob(os.path.join(unicode(topapkdir, 'utf-8'), '*.apk'))]:
+        ir = install(filename)
+        sr = install(filename, True)
+        report.write('{0},{1[0]},{1[1]},{1[2]},{2[0]},{2[1]},{2[2]},{1[3]},{1[4]},{1[5]},{2[3]},{2[4]},{2[5]}\n'.format(
+                os.path.basename(filename), ir, sr))
         report.flush()
     report.close()
+
+def install(filename, sdcard=False):
+    lines = os.popen('adb install {0} -d -r \"{1}\"'.format('-s' if sdcard else '', filename)).readlines()
+    install = 'Success' in [line.strip() for line in lines]
+    launch = True
+    except1 = crash = anr = except2 = None
+    uninstall = False
+    if install:
+        time.sleep(3)
+        package = os.popen('adb shell cat /data/data/com.ztemt.test.common/files/package').readline()
+        lines = os.popen('adb shell monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package)).readlines()
+        for line in lines:
+            if line.startswith('// CRASH: {0}'.format(package)):
+                launch = False
+            elif not launch and line.startswith('// Long Msg:'):
+                crash = 'CRASH: {0}'.format(line[13:].strip())
+                break
+            elif line.startswith('// NOT RESPONDING: {0}'.format(package)):
+                launch = False
+            elif not launch and line.startswith('Reason:'):
+                anr = 'ANR: {0}'.format(line[8:].strip())
+                break
+        time.sleep(3)
+        lines = os.popen('adb uninstall {0}'.format(package)).readlines()
+        uninstall = 'Success' in [line.strip() for line in lines]
+        if not uninstall:
+            except2 = lines[-1].strip()
+    else:
+        except1 = lines[-1].strip()
+        launch = False
+    return ('Pass' if install else 'Fail', 'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail',
+            except1 if except1 else '', crash if crash else anr if anr else '', except2 if except2 else '')
 
 def main():
     state = os.popen('adb get-state').readlines()[-1].strip()
     if state == 'device':
-        print('Operation type choices are:')
-        print('    1. monkey')
-        print('    2. single')
-        print('    3. scenes')
+        print('Module name choices are:')
+        print('    1. start time')
+        print('    2. fluency test')
+        print('    3. monkey test')
+        print('    4. compatibility test')
+        print('    5. uptime')
         try:
-            operation = input('\nWhich would you like? [1] ')
+            module = input('\nWhich would you like? [12345] ')
         except SyntaxError:
-            operation = 1
+            module = 12345
         except NameError:
             sys.exit(2)
 
-        print('\nInstall location choices are:')
-        print('    1. internal storage')
-        print('    2. sdcard')
-        try:
-            location = input('\nWhich would you like? [1] ')
-        except SyntaxError:
-            location = 1
-        except NameError:
-            sys.exit(2)
+        if '3' in str(module):
+            print('\nMonkey type choices are:')
+            print('    1. monkey')
+            print('    2. single')
+            try:
+                operation = input('\nWhich would you like? [1] ')
+            except SyntaxError:
+                operation = 1
+            except NameError:
+                sys.exit(2)
 
         global workout
         if not os.path.exists(workout):
             os.mkdir(workout)
-        if operation == 1:
-            workout = os.path.join(workout, 'monkey')
-        elif operation == 2:
-            workout = os.path.join(workout, 'single')
-        elif operation == 3:
-            workout = os.path.join(workout, 'scenes')
-        else:
-            sys.exit(2)
-        if not os.path.exists(workout):
-            os.mkdir(workout)
-
         model = os.popen('adb shell getprop ro.product.model').readline().strip()
         workout = os.path.join(workout, model)
         shutil.rmtree(workout, ignore_errors=True)
@@ -497,57 +485,58 @@ def main():
 
         os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'automator.jar'))).readlines()
         os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn').readlines()
-        os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo').readlines()
 
         packages = [line[8:].strip() for line in os.popen('adb shell pm list package -s').readlines()]
         packages = [package for package in packages if package in jobj]
-        for package in packages:
-            for item in jobj[package]:
-                getAppsInfo(package, item['title'], item['activity'])
-        if operation == 1:
-            threads = []
-            for package in packages:
-                outdir = os.path.join(workout, package)
-                if not os.path.exists(outdir):
-                    os.mkdir(outdir)
-                t1 = DumpsysMeminfoThread(package, 20, outdir)
-                t2 = DumpsysGfxinfoThread(package,  5, outdir)
-                threads.append(t1)
-                threads.append(t2)
-                t1.start()
-                t2.start()
-            t3 = DumpsysCpuinfoThread(None, 10, outdir)
-            t3.start()
-            monkey()
-            for t in threads:
-                t.stop()
-            t3.stop()
-            for t in threads:
-                t.join()
-            t3.join()
-        elif operation == 2:
-            for package in packages:
-                outdir = os.path.join(workout, package)
-                if not os.path.exists(outdir):
-                    os.mkdir(outdir)
-                t1 = DumpsysMeminfoThread(package, 20, outdir)
-                t2 = DumpsysGfxinfoThread(package,  5, outdir)
-                t3 = DumpsysCpuinfoThread(package, 10, outdir)
-                t1.start()
-                t2.start()
-                t3.start()
-                monkey(package)
-                t1.stop()
-                t2.stop()
-                t3.stop()
-                t1.join()
-                t2.join()
-                t3.join()
-        elif operation == 3:
-            scenes()
 
-        install(location == 2)
-        reboot()
+        for i in str(module):
+            if i == '1':
+                for package in packages:
+                    for item in jobj[package]:
+                        starttime(package, item['title'], item['activity'])
+            elif i == '2':
+                scenes()
+            elif i == '3':
+                mkydir = os.path.join(workout, 'monkey')
+                if operation == 1:
+                    threads = []
+                    if not os.path.exists(mkydir):
+                        os.mkdir(mkydir)
+                    for package in packages:
+                        outdir = os.path.join(mkydir, package)
+                        if not os.path.exists(outdir):
+                            os.mkdir(outdir)
+                        t1 = DumpsysMeminfoThread(package, 20, outdir)
+                        t2 = DumpsysGfxinfoThread(package,  5, outdir)
+                        threads.append(t1)
+                        threads.append(t2)
+                        t1.start()
+                        t2.start()
+                    monkey(mkydir)
+                    for t in threads:
+                        t.stop()
+                    for t in threads:
+                        t.join()
+                elif operation == 2:
+                    if not os.path.exists(mkydir):
+                        os.mkdir(mkydir)
+                    for package in packages:
+                        outdir = os.path.join(mkydir, package)
+                        if not os.path.exists(outdir):
+                            os.mkdir(outdir)
+                        t1 = DumpsysMeminfoThread(package, 20, outdir)
+                        t2 = DumpsysGfxinfoThread(package,  5, outdir)
+                        t1.start()
+                        t2.start()
+                        monkey(mkydir, package)
+                        t1.stop()
+                        t2.stop()
+                        t1.join()
+                        t2.join()
+            elif i == '4':
+                compat()
+            elif i == '5':
+                uptime()
 
         os.popen('adb uninstall com.ztemt.test.common').readlines()
     else:
