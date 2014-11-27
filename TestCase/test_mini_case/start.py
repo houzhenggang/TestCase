@@ -72,6 +72,8 @@ class DumpsysGfxinfoThread(threading.Thread):
         self.loop = True
 
     def run(self):
+        os.popen('adb shell dumpsys gfxinfo {0}'.format(self.package)).readlines()
+
         output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
         while self.loop:
             time.sleep(self.interval)
@@ -84,7 +86,7 @@ class DumpsysGfxinfoThread(threading.Thread):
         for line in output.readlines():
             m = re.match('(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)', line.strip())
             if m:
-                list.append((m.groups()[0], m.groups()[1], m.groups()[2]))
+                list.append((float(m.groups()[0]), float(m.groups()[1]), float(m.groups()[2])))
         output.close()
 
         report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'w')
@@ -92,59 +94,25 @@ class DumpsysGfxinfoThread(threading.Thread):
         report.write(','.join(('Draw', 'Process', 'Execute')) + '\n')
         if len(list) > 0:
             for item in list:
-                report.write(','.join(item) + '\n')
+                report.write('{0[0]},{0[1]},{0[2]}\n'.format(item))
+        report.close()
+
+        file = os.path.join(os.path.dirname(self.outdir), 'gfxinfo.csv')
+        if os.path.exists(file):
+            report = open(file, 'a+')
+        else:
+            report = open(file, 'w')
+            report.write(codecs.BOM_UTF8)
+            report.write('Item,Percentage\n')
+        if len(list) > 0:
+            percent = round(len([x for x in list if sum(x) > 16.0]) * 100.0 / len(list), 2)
+        else:
+            percent = 0
+        report.write('{0},{1}%\n'.format(os.path.basename(self.outdir), percent))
         report.close()
 
     def stop(self):
         self.loop = False
-
-class LogcatGfxinfoThread(threading.Thread):
-
-    def __init__(self, outdir):
-        threading.Thread.__init__(self)
-        self.outdir = outdir
-
-    def run(self):
-        gfxinfo = []
-        os.system('adb logcat -c')
-        output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
-        self.p = subprocess.Popen('adb logcat -v time -s HardwareRenderer:D I:s',
-                shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        while True:
-            line = self.p.stdout.readline()
-            if not line:
-                break
-            m = re.search('\(\s*(\d+)\): gfxinfo\[(\d+)\+?(\d?)\]=\S+=(\d+\.\d+)', line)
-            if m:
-                g = m.groups()
-                gfxinfo.append((int(g[0]), int(g[1]), int(g[2]) if g[2] else 0, float(g[3])))
-                output.write(line)
-        output.close()
-
-        data = {}
-        gfxinfo = sorted(gfxinfo)
-        pids = set([i[0] for i in gfxinfo])
-        for pid in pids:
-            m = max([i[1] for i in gfxinfo if i[0] == pid])
-            item = [[0 for i in range(3)] for i in range(m + 1)]
-            for i in [i for i in gfxinfo if i[0] == pid]:
-                item[i[1]][i[2]] = i[3]
-            data[pid] = item
-
-        report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'w')
-        report.write(codecs.BOM_UTF8)
-        report.write('PID,ID,Draw,Process,Execute,Total\n')
-        for pid in data:
-            i = 0
-            for item in data[pid]:
-                if any(item):
-                    report.write('{0},{1},{2},{3},{4},{5}\n'.format(pid, i, item[0] if item[0] else '',
-                            item[1] if item[1] else '', item[2] if item[2] else '', sum(item)))
-                i += 1
-        report.close()
-
-    def stop(self):
-        self.p.terminate()
 
 class LogcatSkpinfoThread(threading.Thread):
 
@@ -181,7 +149,6 @@ class LogcatSkpinfoThread(threading.Thread):
             report.write(',{0}\n'.format(sum(stat.values())))
         report.close()
 
-        # save to rank board
         file = os.path.join(os.path.dirname(self.outdir), 'skpinfo.csv')
         if os.path.exists(file):
             report = open(file, 'a+')
@@ -196,7 +163,8 @@ class LogcatSkpinfoThread(threading.Thread):
         self.p.terminate()
 
 def screenshot(file):
-    os.system('adb shell screencap -p | sed "s/\\r$//" > \"{0}\"'.format(file))
+    os.system('adb shell screencap -p /data/local/tmp/screenshot.png')
+    os.popen('adb pull /data/local/tmp/screenshot.png \"{0}\"'.format(file)).readline()
 
 def startactivity(packageName, activityName, clearTask):
     cmd = 'adb shell am start --user 0 -W {2} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {0}/{1}'.format(
@@ -302,8 +270,9 @@ def monkey(pardir, package=None):
 
     report = open(os.path.join(outdir, 'monkey.csv'), 'w')
     report.write(codecs.BOM_UTF8)
-    report.write('测试的随机数{0},预期测试次数{1},实际次数{2},测试时间{3},CRASH次数{4},NOT RESPONDING次数{5}\n'.format(data['seed'],
-            data['count'], data['event'], round(data['time'] / 3600000.0, 2), data['crash'], data['anr']))
+    report.write('测试的随机数,预期测试次数,实际次数,测试时间,CRASH次数,NOT RESPONDING次数\n')
+    report.write('{0},{1},{2},{3},{4},{5}\n'.format(data['seed'], data['count'], data['event'],
+            round(data['time'] / 3600000.0, 2), data['crash'], data['anr']))
     report.write('异常的模块名,异常的类型,异常的原因,不响应的模块名,不响应的原因,异常的模块名不带PID用于汇总,不响应的模块名不带PID用于汇总\n')
     for i in range(max(len(crashs), len(anrs))):
         if i < len(crashs):
@@ -324,14 +293,14 @@ def monkey(pardir, package=None):
                 crash_package.split(' (')[0], anr_package.split(' (')[0]))
     report.close()
 
-def scene(name):
+def scene(name, package):
     outdir = os.path.join(workout, 'scenes')
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     outdir = os.path.join(outdir, name)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
-    t1 = LogcatGfxinfoThread(outdir)
+    t1 = DumpsysGfxinfoThread(package, 1, outdir)
     t2 = LogcatSkpinfoThread(outdir)
     t1.start()
     t2.start()
@@ -369,15 +338,15 @@ def scenes():
 
     # get scene info
     os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'scenes.jar'))).readlines()
-    scene('NativeListViewTest')
-    scene('ContactTest')
-    scene('DeveloperTest')
-    scene('GalleryTest')
-    scene('MultiTaskTest')
-    scene('BrowserTest')
-    scene('NoteScaleTest')
-    scene('LauncherTest')
-    scene('PressMenuTest')
+    scene('NativeListViewTest', 'com.example.android.apis')
+    scene('ContactTest', 'com.android.contacts')
+    scene('DeveloperTest', 'com.android.settings')
+    scene('GalleryTest', 'com.android.gallery3d')
+    scene('MultiTaskTest', 'com.android.systemui')
+    scene('BrowserTest', 'com.android.browser')
+    scene('NoteScaleTest', 'com.android.contacts')
+    scene('LauncherTest', 'cn.nubia.launcher')
+    scene('PressMenuTest', 'cn.nubia.launcher')
 
 def uptime():
     os.system('adb reboot')
@@ -397,16 +366,20 @@ def compat():
     os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
     time.sleep(3)
 
+    topapkdir = os.path.join(workdir, 'TOPAPK')
+    shutil.rmtree(topapkdir, ignore_errors=True)
+    remotedir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
+    shutil.copytree(unicode(remotedir, 'utf-8'), 'TOPAPK')
+
     report = open(os.path.join(workout, 'compat.csv'), 'w')
     report.write(codecs.BOM_UTF8)
     report.write('应用文件名,安装i,启动i,卸载i,安装s,启动s,卸载s,异常i-1,异常i-2,异常i-3,异常s-1,异常s-2,异常s-3\n')
 
-    topapkdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
-    for filename in [x.encode('GB2312') for x in glob.glob(os.path.join(unicode(topapkdir, 'utf-8'), '*.apk'))]:
-        ir = install(filename)
-        sr = install(filename, True)
-        report.write('{0},{1[0]},{1[1]},{1[2]},{2[0]},{2[1]},{2[2]},{1[3]},{1[4]},{1[5]},{2[3]},{2[4]},{2[5]}\n'.format(
-                os.path.basename(filename), ir, sr))
+    for filename in glob.glob(os.path.join(topapkdir, '*.apk')):
+        result1 = install(filename)
+        result2 = install(filename, True)
+        report.write('{0},{1[0]},{1[1]},{1[2]},{2[0]},{2[1]},{2[2]},\"{1[3]}\",\"{1[4]}\",\"{1[5]}\",\"{2[3]}\",\"{2[4]}\",\"{2[5]}\"\n'.format(
+                os.path.basename(filename), result1, result2))
         report.flush()
     report.close()
 
@@ -478,6 +451,7 @@ def main():
         if not os.path.exists(workout):
             os.mkdir(workout)
 
+        begin = time.time()
         os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestCommon.apk'))).readlines()
         os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readlines()
         time.sleep(3)
@@ -485,6 +459,7 @@ def main():
 
         os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'automator.jar'))).readlines()
         os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn').readlines()
+        os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo').readlines()
 
         packages = [line[8:].strip() for line in os.popen('adb shell pm list package -s').readlines()]
         packages = [package for package in packages if package in jobj]
@@ -539,6 +514,7 @@ def main():
                 uptime()
 
         os.popen('adb uninstall com.ztemt.test.common').readlines()
+        raw_input('\nAll test finished: elapsed time={0}s, press ENTER to exit.'.format(round(time.time() - begin, 2)))
     else:
         print('Please connect your device')
 
