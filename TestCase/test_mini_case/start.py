@@ -11,8 +11,6 @@ import scenes
 import stress
 import uptime
 
-workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-
 def main():
     state = os.popen('adb get-state').readlines()[-1].strip()
     if state == 'device':
@@ -40,6 +38,7 @@ def main():
             except NameError:
                 sys.exit(2)
 
+        workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
         workout = os.path.join(workdir, 'out')
         if not os.path.exists(workout):
             os.mkdir(workout)
@@ -49,11 +48,11 @@ def main():
         if not os.path.exists(workout):
             os.mkdir(workout)
 
-        begin = time.time()
         os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestKit.apk'))).readlines()
-        os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readlines()
+        os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard').readlines()
+        os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList').readlines()
         time.sleep(3)
-        launchers = eval(os.popen('adb shell cat /data/data/com.ztemt.test.common/files/launcher').readline())
+        launchers = eval(os.popen('adb shell cat /data/data/com.ztemt.test.kit/files/launcher').readline())
 
         os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'automator.jar'))).readlines()
         os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn').readlines()
@@ -61,6 +60,7 @@ def main():
 
         packages = [line[8:].strip() for line in os.popen('adb shell pm list package -s').readlines()]
         packages = [package for package in packages if package in launchers]
+        begin = time.time()
 
         for i in str(module):
             if i == '1':
@@ -74,8 +74,8 @@ def main():
             elif i == '5':
                 uptime.uptime(workout)
 
-        os.popen('adb uninstall com.ztemt.test.common').readlines()
         raw_input('\nAll test finished: elapsed time {0}s, press ENTER to exit.'.format(round(time.time() - begin, 2)))
+        os.popen('adb uninstall com.ztemt.test.kit').readlines()
     else:
         print('Please connect your device')
 

@@ -26,16 +26,16 @@ def main():
         if not os.path.exists(workout):
             os.mkdir(workout)
 
-        os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestCommon.apk'))).readlines()
+        os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestKit.apk'))).readlines()
 
         pattern = os.path.join(os.path.join(workdir, 'apk'), '*.apk')
         for filename in glob.glob(pattern):
-            os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService').readlines()
+            os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT').readlines()
             time.sleep(3)
             lines = os.popen('adb install -r \"{0}\"'.format(filename)).readlines()
             if 'Success' in [line.strip() for line in lines]:
                 time.sleep(3)
-                package = os.popen('adb shell cat /data/data/com.ztemt.test.common/files/package').readline()
+                package = os.popen('adb shell cat /data/data/com.ztemt.test.kit/files/package').readline()
                 output = open(os.path.join(workout, '{0}.txt'.format(os.path.basename(filename)[:-4])), 'w+')
                 command = 'adb shell monkey -p {0} -s 13 --ignore-timeouts --ignore-crashes -v {1}'.format(package, count)
                 subprocess.Popen(command, shell=True, stdout=output, stderr=output).wait()
@@ -49,7 +49,7 @@ def main():
             else:
                 print('{0} {1}'.format(os.path.basename(filename), lines[-1]))
 
-        os.popen('adb uninstall com.ztemt.test.common').readlines()
+        os.popen('adb uninstall com.ztemt.test.kit').readlines()
     else:
         print('Please connect your device')
 

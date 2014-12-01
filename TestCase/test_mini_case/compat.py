@@ -10,41 +10,44 @@ import time
 workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 def install(filename, sdcard=False):
+    os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT').readline()
+    time.sleep(3)
+
+    launch = True
+    except1 = except2 = except3 = None
+    uninstall = False
+
     lines = os.popen('adb install {0} -d -r \"{1}\"'.format('-s' if sdcard else '', filename)).readlines()
     install = 'Success' in [line.strip() for line in lines]
-    launch = True
-    except1 = crash = anr = except2 = None
-    uninstall = False
     if install:
         time.sleep(3)
-        package = os.popen('adb shell cat /data/data/com.ztemt.test.common/files/package').readline()
+        package = os.popen('adb shell cat /data/data/com.ztemt.test.kit/files/package').readline()
         lines = os.popen('adb shell monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package)).readlines()
         for line in lines:
             if line.startswith('// CRASH: {0}'.format(package)):
                 launch = False
             elif not launch and line.startswith('// Long Msg:'):
-                crash = 'CRASH: {0}'.format(line[13:].strip())
+                except2 = 'CRASH: {0}'.format(line[13:].strip())
                 break
             elif line.startswith('// NOT RESPONDING: {0}'.format(package)):
                 launch = False
             elif not launch and line.startswith('Reason:'):
-                anr = 'ANR: {0}'.format(line[8:].strip())
+                except2 = 'ANR: {0}'.format(line[8:].strip())
                 break
         time.sleep(3)
         lines = os.popen('adb uninstall {0}'.format(package)).readlines()
         uninstall = 'Success' in [line.strip() for line in lines]
         if not uninstall:
-            except2 = lines[-1].strip()
+            except3 = lines[-1].strip()
     else:
         except1 = lines[-1].strip()
         launch = False
-    return ('Pass' if install else 'Fail', 'Pass' if launch else 'Fail', 'Pass' if uninstall else 'Fail',
-            except1 if except1 else '', crash if crash else anr if anr else '', except2 if except2 else '')
+
+    y = lambda x: 'Pass' if x else 'Fail'
+    z = lambda x: x if x else ''
+    return (y(install), y(launch), y(uninstall), z(except1), z(except2), z(except3))
 
 def compat(workout):
-    os.popen('adb shell am startservice --user 0 -W -n com.ztemt.test.common/.PackageService --es command getLauncherList').readline()
-    time.sleep(3)
-
     topapkdir = os.path.join(workdir, 'TOPAPK')
     shutil.rmtree(topapkdir, ignore_errors=True)
     remotedir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
