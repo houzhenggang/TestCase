@@ -30,7 +30,7 @@ class LogcatSkpinfoThread(threading.Thread):
                 break
             m = re.search('(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}).*Skipped (\d+) frames!', line)
             if m:
-                file = '{0}.png'.format('-'.join(m.groups()[0].split(':')))
+                file = os.path.join(self.outdir, '{0}.png'.format('-'.join(m.groups()[0].split(':'))))
                 os.system('adb shell screencap -p /data/local/tmp/screenshot.png')
                 os.popen('adb pull /data/local/tmp/screenshot.png \"{0}\"'.format(file)).readline()
                 c = int(m.groups()[1])
@@ -48,7 +48,12 @@ class LogcatSkpinfoThread(threading.Thread):
                 report.write('{0},{1}\n'.format(key, stat[key]))
         report.close()
 
-        file = os.path.join(os.path.dirname(self.outdir), 'skpinfo.csv')
+        if os.path.basename(self.outdir) == 'monkey':
+            file = os.path.join(self.outdir, 'skpinfo.csv')
+            os.remove(file)
+        else:
+            file = os.path.join(os.path.dirname(self.outdir), 'skpinfo.csv')
+
         if os.path.exists(file):
             report = open(file, 'a+')
         else:

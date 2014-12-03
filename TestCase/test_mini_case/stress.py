@@ -8,6 +8,8 @@ import sys
 import threading
 import time
 
+import scenes
+
 workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 class DumpsysMeminfoThread(threading.Thread):
@@ -220,7 +222,11 @@ def stress(workout, packages, single=False):
             threads.append(t2)
             t1.start()
             t2.start()
+        t3 = scenes.LogcatSkpinfoThread(pardir)
+        t3.start()
         monkey(pardir)
+        t3.stop()
+        t3.join()
         for t in threads:
             t.stop()
         for t in threads:
@@ -232,10 +238,14 @@ def stress(workout, packages, single=False):
                 os.mkdir(outdir)
             t1 = DumpsysMeminfoThread(package, 20, outdir)
             t2 = DumpsysGfxinfoThread(package,  5, outdir)
+            t3 = scenes.LogcatSkpinfoThread(outdir)
             t1.start()
             t2.start()
+            t3.start()
             monkey(pardir, package)
             t1.stop()
             t2.stop()
+            t3.stop()
             t1.join()
             t2.join()
+            t3.join()

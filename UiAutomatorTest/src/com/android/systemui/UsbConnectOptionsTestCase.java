@@ -11,9 +11,11 @@ public class UsbConnectOptionsTestCase extends UiAutomatorTestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        String cmd = "am start -n com.android.systemui/.usb.UsbConnectOptionsActivity";
-        Process p = Runtime.getRuntime().exec(cmd);
-        p.waitFor();
+        getUiDevice().openNotification();
+
+        UiObject options = new UiObject(new UiSelector().resourceId(
+                "android:id/text").text("触摸可显示其他 USB 选项。"));
+        options.clickAndWaitForNewWindow();
     }
 
     public void testEnableUMS() throws UiObjectNotFoundException {
