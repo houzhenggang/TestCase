@@ -20,5 +20,5 @@ def uptime(workout):
     report = open(os.path.join(workout, 'uptime.csv'), 'w')
     report.write(codecs.BOM_UTF8)
     report.write('开机时间\n')
-    report.write('{0:0.3f}\n'.format(uptime + 2))
+    report.write('{0:0.3f}s\n'.format(uptime + 2))
     report.close()

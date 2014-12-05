@@ -27,11 +27,12 @@ def test_storage():
     os.system('adb shell rm /data/local/tmp/automator.jar')
     return lines
 
-def test_usb(type):
-    os.system('adb reboot')
-    os.system('adb wait-for-device')
-    while os.popen('adb shell getprop sys.boot_completed').readline().strip() != '1':
-        time.sleep(3)
+def test_usb(type, fmt=False):
+    if fmt:
+        os.system('adb reboot')
+        os.system('adb wait-for-device')
+        while os.popen('adb shell getprop sys.boot_completed').readline().strip() != '1':
+            time.sleep(3)
     os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'ramdisk.sh'))).readlines()
     os.popen('adb shell sh /data/local/tmp/ramdisk.sh').readlines()
     os.system('adb shell setprop sys.usb.config {0},adb'.format(type))
@@ -51,10 +52,13 @@ def test_usb(type):
         time.sleep(3)
         loop += 1
     if drive:
-        os.system('format {0}: /fs:fat32 /q'.format(drive))
+        if fmt:
+            os.system('echo y | format {0}: /fs:fat32 /q'.format(drive))
 
         file1 = os.path.join(workdir, 'test.zip')
         file2 = os.path.join(drive + ':' + os.sep, 'test.zip')
+        if os.path.exists(file2):
+            os.remove(file2)
 
         st = time.time()
         shell.SHFileOperation((0, shellcon.FO_COPY, file1, file2, 0, None, None))
@@ -68,8 +72,9 @@ def test_usb(type):
         shell.SHFileOperation((0, shellcon.FO_COPY, file2, file3, 0, None, None))
         read = round(os.path.getsize(file2) / 1048576.0 / (time.time() - st), 2)
 
+        os.remove(file2)
         os.remove(file3)
-        os.popen('adb shell rm /data/local/tmp/ramdisk.sh').readlines()
+    os.popen('adb shell rm /data/local/tmp/ramdisk.sh').readlines()
     return (read, write)
 
 def main():
@@ -91,6 +96,9 @@ def main():
         os.mkdir(workout)
     model = os.popen('adb shell getprop ro.product.model').readline().strip()
     workout = os.path.join(workout, model)
+    if not os.path.exists(workout):
+        os.mkdir(workout)
+    workout = os.path.join(workout, time.strftime('%Y-%m-%d-%H-%M', time.localtime()))
     shutil.rmtree(workout, ignore_errors=True)
     if not os.path.exists(workout):
         os.mkdir(workout)
@@ -101,7 +109,7 @@ def main():
     report.write(codecs.BOM_UTF8)
     report.writelines(test_storage())
     report.flush()
-    report.write(pattern.format('mass_storage', test_usb('mass_storage')))
+    report.write(pattern.format('ums', test_usb('mass_storage', True)))
     report.flush()
     report.write(pattern.format('mtp', test_usb('mtp')))
     report.flush()

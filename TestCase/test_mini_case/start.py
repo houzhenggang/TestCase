@@ -9,25 +9,27 @@ import compat
 import launch
 import scenes
 import stress
+import update
 import uptime
 
 def main():
     state = os.popen('adb get-state').readlines()[-1].strip()
     if state == 'device':
         print('Module name choices are:')
-        print('    1. start time')
-        print('    2. fluency test')
-        print('    3. monkey test')
-        print('    4. compatibility test')
-        print('    5. uptime')
+        print('    1. system update')
+        print('    2. start time')
+        print('    3. fluency test')
+        print('    4. monkey test')
+        print('    5. compatibility test')
+        print('    6. boot time')
         try:
-            module = input('\nWhich would you like? [12345] ')
+            module = input('\nWhich would you like? [123456] ')
         except SyntaxError:
-            module = 12345
+            module = 123456
         except NameError:
             sys.exit(2)
 
-        if '3' in str(module):
+        if '4' in str(module):
             print('\nMonkey type choices are:')
             print('    1. monkey')
             print('    2. single')
@@ -63,15 +65,18 @@ def main():
         begin = time.time()
 
         for i in str(module):
+            os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard').readlines()
             if i == '1':
-                launch.launch(workout, packages, launchers)
+                update.update()
             elif i == '2':
-                scenes.scenes(workout)
+                launch.launch(workout, packages, launchers)
             elif i == '3':
-                stress.stress(workout, packages, operation == 2)
+                scenes.scenes(workout)
             elif i == '4':
-                compat.compat(workout)
+                stress.stress(workout, packages, operation == 2)
             elif i == '5':
+                compat.compat(workout)
+            elif i == '6':
                 uptime.uptime(workout)
 
         raw_input('\nAll test finished: elapsed time {0}s, press ENTER to exit.'.format(round(time.time() - begin, 2)))

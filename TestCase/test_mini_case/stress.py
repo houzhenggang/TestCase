@@ -131,7 +131,7 @@ def monkey(pardir, package=None):
 
     while True:
         os.system('adb wait-for-device')
-        if not os.popen('adb shell ps | grep com.android.commands.monkey').readline().strip():
+        if not 'com.android.commands.monkey' in [x.split()[-1] for x in os.popen('adb shell ps').readlines()]:
             break
         time.sleep(20)
 
@@ -222,11 +222,11 @@ def stress(workout, packages, single=False):
             threads.append(t2)
             t1.start()
             t2.start()
-        t3 = scenes.LogcatSkpinfoThread(pardir)
-        t3.start()
+        #t3 = scenes.LogcatSkpinfoThread(pardir)
+        #t3.start()
         monkey(pardir)
-        t3.stop()
-        t3.join()
+        #t3.stop()
+        #t3.join()
         for t in threads:
             t.stop()
         for t in threads:
