@@ -22,7 +22,7 @@ def install(filename, sdcard=False):
     if install:
         time.sleep(3)
         package = os.popen('adb shell cat /data/data/com.ztemt.test.kit/files/package').readline()
-        lines = os.popen('adb shell monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package)).readlines()
+        lines = os.popen('adb shell monkey -p {0} -s 10 --ignore-timeouts --ignore-crashes -v 10000'.format(package)).readlines()
         for line in lines:
             if line.startswith('// CRASH: {0}'.format(package)):
                 launch = False
