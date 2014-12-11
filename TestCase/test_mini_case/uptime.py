@@ -12,8 +12,6 @@ def reboot():
         time.sleep(0.1)
 
 def uptime(workout):
-    reboot()
-
     m = re.search('up time: (\d+):(\d{2}):(\d{2})', os.popen('adb shell uptime').readline())
     uptime = int(m.groups()[0]) * 3600 + int(m.groups()[1]) * 60 + int(m.groups()[2])
 

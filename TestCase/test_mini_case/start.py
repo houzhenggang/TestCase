@@ -24,7 +24,7 @@ def main():
     except getopt.GetoptError:
         sys.exit(2)
 
-    module = 123456
+    module = 23456
     if '-m' in opts:
         try:
             module = int(opts['-m'])
@@ -39,7 +39,7 @@ def main():
         print('    5. compatibility test')
         print('    6. boot time')
         try:
-            module = input('\nWhich would you like? [123456] ')
+            module = input('\nWhich would you like? [23456] ')
         except NameError:
             sys.exit(2)
         except SyntaxError:
@@ -73,7 +73,8 @@ def main():
     if not os.path.exists(workout):
         os.mkdir(workout)
 
-    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'TestKit.apk'))).readlines()
+    os.popen('adb push \"{0}\" /data/local/tmp/tmp.apk'.format(os.path.join(workdir, 'TestKit.apk'))).readlines()
+    os.popen('adb shell pm install -r /data/local/tmp/tmp.apk').readlines()
     os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard').readlines()
     os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList').readlines()
     time.sleep(3)
@@ -88,6 +89,7 @@ def main():
     begin = time.time()
 
     for i in str(module):
+        uptime.reboot()
         os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard').readlines()
         if i == '1':
             update.update()

@@ -143,23 +143,28 @@ def monkey(pardir, package=None):
     for line in output.readlines():
         if line.startswith(':Monkey:'):
             m = re.search(':Monkey: seed=(\d+) count=(\d+)', line)
-            data['seed']  = m.groups()[0]
-            data['count'] = m.groups()[1]
+            if m:
+                data['seed']  = m.groups()[0]
+                data['count'] = m.groups()[1]
         elif line.find('// Sending event #') > -1:
             m = re.search('// Sending event #(\d+)', line)
-            data['event'] = m.groups()[0]
+            if m:
+                data['event'] = m.groups()[0]
         elif line.find('//[calendar_time:') > -1:
             m = re.search('system_uptime:(\d+)', line)
-            if 'start' in data:
-                data['time'] = int(m.groups()[0]) - data['start']
-            else:
-                data['start'] = int(m.groups()[0])
+            if m:
+                if 'start' in data:
+                    data['time'] = int(m.groups()[0]) - data['start']
+                else:
+                    data['start'] = int(m.groups()[0])
         elif line.startswith('Events injected:'):
             m = re.search('Events injected: (\d+)', line)
-            data['event'] = m.groups()[0]
+            if m:
+                data['event'] = m.groups()[0]
         elif line.startswith('## Network stats:'):
             m = re.search('elapsed time=(\d+)ms', line)
-            data['time'] = int(m.groups()[0])
+            if m:
+                data['time'] = int(m.groups()[0])
         elif line.find('// CRASH:') > -1:
             data['crash'] = data['crash'] + 1
             crash = {'package': line.strip()[3:]}
@@ -172,10 +177,11 @@ def monkey(pardir, package=None):
             else:
                 crash['reason'] = 'no cause'
         elif line.find('// NOT RESPONDING:') > -1:
-            data['anr'] = data['anr'] + 1
             m = re.search('// (NOT RESPONDING: .+ \(pid \d+\))', line)
-            anr = {'package': m.groups()[0]}
-            anrs.append(anr)
+            if m:
+                data['anr'] = data['anr'] + 1
+                anr = {'package': m.groups()[0]}
+                anrs.append(anr)
         elif line.startswith('Reason:'):
             anr['reason'] = line[8:].strip()
     output.close()

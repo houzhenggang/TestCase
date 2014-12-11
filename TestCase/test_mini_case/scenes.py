@@ -107,7 +107,8 @@ def scenes(workout):
     os.popen('adb shell uiautomator runtest automator.jar -c cn.nubia.databackup.RestoreTestCase#testRestore').readlines()
 
     # install ApiDemos
-    os.popen('adb install -r \"{0}\"'.format(os.path.join(workdir, 'ApiDemos.apk'))).readlines()
+    os.popen('adb push \"{0}\" /data/local/tmp/tmp.apk'.format(os.path.join(workdir, 'ApiDemos.apk'))).readlines()
+    os.popen('adb shell pm install -r /data/local/tmp/tmp.apk').readlines()
 
     # get scene info
     os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'scenes.jar'))).readlines()

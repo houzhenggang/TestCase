@@ -10,19 +10,20 @@ import time
 workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 def install(filename, sdcard=False):
-    os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT').readline()
+    os.popen('adb shell am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard').readlines()
     time.sleep(3)
 
     launch = True
     except1 = except2 = except3 = None
     uninstall = False
 
-    lines = os.popen('adb install {0} -d -r \"{1}\"'.format('-s' if sdcard else '', filename)).readlines()
+    os.popen('adb push \"{0}\" /data/local/tmp/tmp.apk'.format(filename)).readlines()
+    lines = os.popen('adb shell pm install {0} -d -r /data/local/tmp/tmp.apk'.format('-s' if sdcard else '')).readlines()
     install = 'Success' in [line.strip() for line in lines]
     if install:
         time.sleep(3)
         package = os.popen('adb shell cat /data/data/com.ztemt.test.kit/files/package').readline()
-        lines = os.popen('adb shell monkey -p {0} -s 10 --ignore-timeouts --ignore-crashes -v 10000'.format(package)).readlines()
+        lines = os.popen('adb shell monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package)).readlines()
         for line in lines:
             if line.startswith('// CRASH: {0}'.format(package)):
                 launch = False
