@@ -39,9 +39,9 @@ def install(filename, sdcard=False):
         lines = os.popen('adb uninstall {0}'.format(package)).readlines()
         uninstall = 'Success' in [line.strip() for line in lines]
         if not uninstall:
-            except3 = lines[-1].strip()
+            except3 = lines[-1].strip() if lines else 'Unknown'
     else:
-        except1 = lines[-1].strip()
+        except1 = lines[-1].strip() if lines else 'Unknown'
         launch = False
 
     y = lambda x: 'Pass' if x else 'Fail'

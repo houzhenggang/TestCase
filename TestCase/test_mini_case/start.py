@@ -45,7 +45,7 @@ def main():
         except SyntaxError:
             pass
 
-    operation = 1
+    operation = 2
     if '4' in str(module):
         if '-t' in opts:
             try:
@@ -57,7 +57,7 @@ def main():
             print('    1. monkey')
             print('    2. single')
             try:
-                operation = input('\nWhich would you like? [1] ')
+                operation = input('\nWhich would you like? [2] ')
             except NameError:
                 sys.exit(2)
             except SyntaxError:
@@ -82,7 +82,6 @@ def main():
 
     os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'automator.jar'))).readlines()
     os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn').readlines()
-    os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo').readlines()
 
     packages = [line[8:].strip() for line in os.popen('adb shell pm list package -s').readlines()]
     packages = [package for package in packages if package in launchers]
@@ -96,8 +95,10 @@ def main():
         elif i == '2':
             launch.launch(workout, packages, launchers)
         elif i == '3':
+            os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo').readlines()
             scenes.scenes(workout)
         elif i == '4':
+            os.popen('adb shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo').readlines()
             stress.stress(workout, packages, operation == 2)
         elif i == '5':
             compat.compat(workout)

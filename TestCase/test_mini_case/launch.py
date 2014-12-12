@@ -33,7 +33,8 @@ def appinfo(package, title, activity):
     else:
         size = '0'
 
-    return (title, size, t, min(t[1:]), max(t[1:]), round(float(sum(t[1:])) / (len(t) - 1), 1))
+    valid = [x for x in t[1:] if x > 0]
+    return (title, size, t, min(valid), max(valid), round(float(sum(valid)) / len(valid), 1))
 
 def launch(workout, packages, launchers):
     report = open(os.path.join(workout, 'launch.csv'), 'w')

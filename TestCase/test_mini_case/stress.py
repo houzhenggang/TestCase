@@ -84,18 +84,21 @@ class DumpsysGfxinfoThread(threading.Thread):
 
         output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'r')
         list = []
+        i = 0
         for line in output.readlines():
+            if line.startswith('Profile data in ms:') or line.startswith('No process found for:'):
+                i += 1
             m = re.match('(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)', line.strip())
             if m:
-                list.append((float(m.groups()[0]), float(m.groups()[1]), float(m.groups()[2])))
+                list.append((float(m.groups()[0]), float(m.groups()[1]), float(m.groups()[2]), i))
         output.close()
 
         report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'w')
         report.write(codecs.BOM_UTF8)
-        report.write(','.join(('Draw', 'Process', 'Execute')) + '\n')
+        report.write(','.join(('Draw', 'Process', 'Execute', 'No.')) + '\n')
         if len(list) > 0:
             for item in list:
-                report.write('{0[0]},{0[1]},{0[2]}\n'.format(item))
+                report.write('{0[0]},{0[1]},{0[2]},{0[3]}\n'.format(item))
         report.close()
 
         file = os.path.join(os.path.dirname(self.outdir), 'gfxinfo.csv')
@@ -106,7 +109,7 @@ class DumpsysGfxinfoThread(threading.Thread):
             report.write(codecs.BOM_UTF8)
             report.write('项目,绘制卡顿率\n')
         if len(list) > 0:
-            percent = round(len([x for x in list if sum(x) > 16.0]) * 100.0 / len(list), 2)
+            percent = round(len([x for x in list if sum(x[0:3]) > 16.0]) * 100.0 / len(list), 2)
         else:
             percent = 0
         report.write('{0},{1}%\n'.format(os.path.basename(self.outdir), percent))
@@ -171,11 +174,12 @@ def monkey(pardir, package=None):
             crashs.append(crash)
         elif line.startswith('// Long Msg:'):
             ss = line.strip().split(': ')
-            crash['type'] = ss[1]
-            if len(ss) > 2:
-                crash['reason'] = ss[2]
-            else:
-                crash['reason'] = 'no cause'
+            if 'crash' in locals():
+                crash['type'] = ss[1]
+                if len(ss) > 2:
+                    crash['reason'] = ss[2]
+                else:
+                    crash['reason'] = 'no cause'
         elif line.find('// NOT RESPONDING:') > -1:
             m = re.search('// (NOT RESPONDING: .+ \(pid \d+\))', line)
             if m:
@@ -183,7 +187,8 @@ def monkey(pardir, package=None):
                 anr = {'package': m.groups()[0]}
                 anrs.append(anr)
         elif line.startswith('Reason:'):
-            anr['reason'] = line[8:].strip()
+            if 'anr' in locals():
+                anr['reason'] = line[8:].strip()
     output.close()
 
     report = open(os.path.join(outdir, 'monkey.csv'), 'w')
