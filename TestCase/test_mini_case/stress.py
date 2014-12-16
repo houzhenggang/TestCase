@@ -1,31 +1,32 @@
 # -*- coding:UTF-8 -*-
 
 import codecs
+import csv
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
 import time
 
+import adbkit as adb
 import scenes
-
-workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 class DumpsysMeminfoThread(threading.Thread):
 
-    def __init__(self, package, interval, outdir):
+    def __init__(self, outdir, package, interval):
         threading.Thread.__init__(self)
+        self.outdir = outdir
         self.package = package
         self.interval = interval
-        self.outdir = outdir
         self.loop = True
 
     def run(self):
         output = open(os.path.join(self.outdir, 'meminfo.txt'), 'w')
         while self.loop:
             time.sleep(self.interval)
-            subprocess.Popen('adb shell dumpsys meminfo {0}'.format(self.package),
+            subprocess.Popen('adb -s {0} shell dumpsys meminfo {1}'.format(adb.sno, self.package),
                     shell=False, stdout=output, stderr=output).wait()
         output.close()
 
@@ -50,14 +51,13 @@ class DumpsysMeminfoThread(threading.Thread):
                 data.clear()
         output.close()
 
-        report = open(os.path.join(self.outdir, 'meminfo.csv'), 'w')
+        report = open(os.path.join(self.outdir, 'meminfo.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
-        report.write(','.join(('Native Heap Size', 'Native Heap Alloc', 'Native Heap Free',
-                'Dalvik Heap Size', 'Dalvik Heap Alloc', 'Dalvik Heap Free')) + '\n')
+        writer = csv.writer(report, quoting=csv.QUOTE_ALL)
+        writer.writerow(['Native Heap Size', 'Native Heap Alloc', 'Native Heap Free', 'Dalvik Heap Size', 'Dalvik Heap Alloc', 'Dalvik Heap Free'])
         if len(list) > 0:
             for item in list:
-                report.write(','.join((item['native_heap_size'], item['native_heap_alloc'], item['native_heap_free'],
-                        item['dalvik_heap_size'], item['dalvik_heap_alloc'], item['dalvik_heap_free'])) + '\n')
+                writer.writerow([item['native_heap_size'], item['native_heap_alloc'], item['native_heap_free'], item['dalvik_heap_size'], item['dalvik_heap_alloc'], item['dalvik_heap_free']])
         report.close()
 
     def stop(self):
@@ -65,20 +65,20 @@ class DumpsysMeminfoThread(threading.Thread):
 
 class DumpsysGfxinfoThread(threading.Thread):
 
-    def __init__(self, package, interval, outdir):
+    def __init__(self, outdir, package, interval):
         threading.Thread.__init__(self)
+        self.outdir = outdir
         self.package = package
         self.interval = interval
-        self.outdir = outdir
         self.loop = True
 
     def run(self):
-        os.popen('adb shell dumpsys gfxinfo {0}'.format(self.package)).readlines()
+        os.popen('adb -s {0} shell dumpsys gfxinfo {1}'.format(adb.sno, self.package)).readlines()
 
         output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
         while self.loop:
             time.sleep(self.interval)
-            subprocess.Popen('adb shell dumpsys gfxinfo {0}'.format(self.package),
+            subprocess.Popen('adb -s {0} shell dumpsys gfxinfo {1}'.format(adb.sno, self.package),
                     shell=False, stdout=output, stderr=output).wait()
         output.close()
 
@@ -93,26 +93,29 @@ class DumpsysGfxinfoThread(threading.Thread):
                 list.append((float(m.groups()[0]), float(m.groups()[1]), float(m.groups()[2]), i))
         output.close()
 
-        report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'w')
+        report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
-        report.write(','.join(('Draw', 'Process', 'Execute', 'No.')) + '\n')
+        writer = csv.writer(report, quoting=csv.QUOTE_ALL)
+        writer.writerow(['Draw', 'Process', 'Execute', 'No.'])
         if len(list) > 0:
             for item in list:
-                report.write('{0[0]},{0[1]},{0[2]},{0[3]}\n'.format(item))
+                writer.writerow(item)
         report.close()
 
         file = os.path.join(os.path.dirname(self.outdir), 'gfxinfo.csv')
         if os.path.exists(file):
-            report = open(file, 'a+')
+            report = open(file, 'ab+')
+            writer = csv.writer(report, quoting=csv.QUOTE_ALL)
         else:
-            report = open(file, 'w')
+            report = open(file, 'wb')
             report.write(codecs.BOM_UTF8)
-            report.write('项目,绘制卡顿率\n')
+            writer = csv.writer(report, quoting=csv.QUOTE_ALL)
+            writer.writerow(['项目', '绘制卡顿率'])
         if len(list) > 0:
             percent = round(len([x for x in list if sum(x[0:3]) > 16.0]) * 100.0 / len(list), 2)
         else:
             percent = 0
-        report.write('{0},{1}%\n'.format(os.path.basename(self.outdir), percent))
+        writer.writerow([os.path.basename(self.outdir), '{0}%'.format(percent)])
         report.close()
 
     def stop(self):
@@ -126,19 +129,20 @@ def monkey(pardir, package=None):
     else:
         outdir = pardir
 
-    os.popen('adb push \"{0}\" /data/local/tmp'.format(os.path.join(workdir, 'monkey.sh'))).readlines()
+    workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+    os.popen('adb -s {0} push \"{1}\" /data/local/tmp'.format(adb.sno, os.path.join(workdir, 'monkey.sh'))).readlines()
     if package:
-        os.system('adb shell sh /data/local/tmp/monkey.sh {0}'.format(package))
+        os.system('adb -s {0} shell sh /data/local/tmp/monkey.sh {1}'.format(adb.sno, package))
     else:
-        os.system('adb shell sh /data/local/tmp/monkey.sh')
+        os.system('adb -s {0} shell sh /data/local/tmp/monkey.sh'.format(adb.sno))
 
     while True:
-        os.system('adb wait-for-device')
-        if not 'com.android.commands.monkey' in [x.split()[-1] for x in os.popen('adb shell ps').readlines()]:
+        os.system('adb -s {0} wait-for-device'.format(adb.sno))
+        if not 'com.android.commands.monkey' in [x.split()[-1] for x in os.popen('adb -s {0} shell ps'.format(adb.sno)).readlines()]:
             break
         time.sleep(20)
 
-    os.popen('adb pull /data/local/tmp/monkey.txt \"{0}\"'.format(outdir)).readlines()
+    os.popen('adb -s {0} pull /data/local/tmp/monkey.txt \"{1}\"'.format(adb.sno, outdir)).readlines()
     output = open(os.path.join(outdir, 'monkey.txt'), 'r')
     data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
     crashs = []
@@ -191,12 +195,12 @@ def monkey(pardir, package=None):
                 anr['reason'] = line[8:].strip()
     output.close()
 
-    report = open(os.path.join(outdir, 'monkey.csv'), 'w')
+    report = open(os.path.join(outdir, 'monkey.csv'), 'wb')
     report.write(codecs.BOM_UTF8)
-    report.write('测试的随机数,预期测试次数,实际次数,测试时间,CRASH次数,NOT RESPONDING次数\n')
-    report.write('{0},{1},{2},{3},{4},{5}\n'.format(data['seed'], data['count'], data['event'],
-            round(data['time'] / 3600000.0, 2), data['crash'], data['anr']))
-    report.write('异常的模块名,异常的类型,异常的原因,不响应的模块名,不响应的原因,异常的模块名不带PID用于汇总,不响应的模块名不带PID用于汇总\n')
+    writer = csv.writer(report, quoting=csv.QUOTE_ALL)
+    writer.writerow(['测试的随机数', '预期测试次数', '实际次数', '测试时间', 'CRASH次数', 'NOT RESPONDING次数'])
+    writer.writerow([data['seed'], data['count'], data['event'], round(data['time'] / 3600000.0, 2), data['crash'], data['anr']])
+    writer.writerow(['异常的模块名', '异常的类型', '异常的原因', '不响应的模块名', '不响应的原因', '异常的模块名不带PID用于汇总', '不响应的模块名不带PID用于汇总'])
     for i in range(max(len(crashs), len(anrs))):
         if i < len(crashs):
             crash_package = crashs[i]['package']
@@ -212,12 +216,15 @@ def monkey(pardir, package=None):
         else:
             anr_package = ''
             anr_reason = ''
-        report.write('{0},{1},\"{2}\",{3},\"{4}\",{5},{6}\n'.format(crash_package, crash_type, crash_reason, anr_package, anr_reason,
-                crash_package.split(' (')[0], anr_package.split(' (')[0]))
+        writer.writerow([crash_package, crash_type, crash_reason, anr_package, anr_reason, crash_package.split(' (')[0], anr_package.split(' (')[0]])
     report.close()
 
-def stress(workout, packages, single=False):
+def execute(workout, packages, single=False):
+    # eanble dumpsys gfxinfo
+    os.popen('adb -s {0} shell uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo'.format(adb.sno)).readlines()
+
     pardir = os.path.join(workout, 'monkey')
+    shutil.rmtree(pardir, ignore_errors=True)
     if not os.path.exists(pardir):
         os.mkdir(pardir)
 
@@ -227,17 +234,13 @@ def stress(workout, packages, single=False):
             outdir = os.path.join(pardir, package)
             if not os.path.exists(outdir):
                 os.mkdir(outdir)
-            t1 = DumpsysMeminfoThread(package, 20, outdir)
-            t2 = DumpsysGfxinfoThread(package,  5, outdir)
+            t1 = DumpsysMeminfoThread(outdir, package, 20)
+            t2 = DumpsysGfxinfoThread(outdir, package,  5)
             threads.append(t1)
             threads.append(t2)
             t1.start()
             t2.start()
-        #t3 = scenes.LogcatSkpinfoThread(pardir)
-        #t3.start()
         monkey(pardir)
-        #t3.stop()
-        #t3.join()
         for t in threads:
             t.stop()
         for t in threads:
@@ -247,8 +250,8 @@ def stress(workout, packages, single=False):
             outdir = os.path.join(pardir, package)
             if not os.path.exists(outdir):
                 os.mkdir(outdir)
-            t1 = DumpsysMeminfoThread(package, 20, outdir)
-            t2 = DumpsysGfxinfoThread(package,  5, outdir)
+            t1 = DumpsysMeminfoThread(outdir, package, 20)
+            t2 = DumpsysGfxinfoThread(outdir, package,  5)
             t3 = scenes.LogcatSkpinfoThread(outdir)
             t1.start()
             t2.start()
