@@ -131,7 +131,7 @@ def execute(workout):
         scene(workout, 'MultiTaskTest', 'com.android.systemui', 'cn.sony.test.MultiTaskTest')
         scene(workout, 'BrowserTest', 'com.android.browser', 'cn.sony.test.BrowserTest')
         scene(workout, 'LauncherTest', 'com.sonyericsson.home', 'cn.sony.test.LauncherTest')
-    elif model == '':
+    elif model == 'SM-G9008V':
         scene(workout, 'NativeListViewTest', 'com.example.android.apis', 'cn.sung.test.NativeListViewTest')
         scene(workout, 'ContactTest', 'com.android.contacts', 'cn.sung.test.ContactTest')
         scene(workout, 'DeveloperTest', '', 'cn.sung.test.DeveloperTest')

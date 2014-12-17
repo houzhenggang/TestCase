@@ -23,20 +23,21 @@ def main():
 
     devices = adb.devices()
     adb.sno = opts['-s'] if '-s' in opts else ''
-    if not adb.sno and len(devices) > 1:
+    if not adb.sno:
         index = 0
-        print('Device serial number choices are:')
-        for i in range(len(devices)):
-            print('    {0}. {1}'.format(i + 1, devices[i][0]))
-        try:
-            index = input('\nWhich would you like? [1] ') - 1
-            index = divmod(index, len(devices))[1]
-        except SyntaxError:
-            pass
-        except NameError:
-            pass
+        if len(devices) > 1:
+            print('Device serial number choices are:')
+            for i in range(len(devices)):
+                print('    {0}. {1}'.format(i + 1, devices[i][0]))
+            try:
+                index = input('\nWhich would you like? [1] ') - 1
+                index = divmod(index, len(devices))[1]
+            except SyntaxError:
+                pass
+            except NameError:
+                pass
+            print('')
         adb.sno = devices[index][0]
-        print('')
 
     if adb.adb('get-state')[-1].strip() != 'device':
         if adb.sno:

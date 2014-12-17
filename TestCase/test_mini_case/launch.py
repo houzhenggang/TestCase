@@ -37,6 +37,7 @@ def appinfo(package, title, activity):
         size = '0'
 
     valid = [x for x in t[1:] if x > 0]
+    valid = valid if valid else [0]
     return (title, size, t, min(valid), max(valid), round(float(sum(valid)) / len(valid), 1))
 
 def execute(workout, packages, launchers):
