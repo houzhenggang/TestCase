@@ -18,6 +18,9 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
+    def setup(self):
+        pass
+
     def scene(self, name, package, clsname):
         outdir = os.path.join(self.workout, name)
         if not os.path.exists(outdir):

@@ -48,7 +48,16 @@ def main():
             print('Please connect your device')
         sys.exit(2)
 
-    module = 23456
+    workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+    workout = os.path.join(workdir, 'out')
+    if not os.path.exists(workout):
+        os.mkdir(workout)
+    workout = os.path.join(workout, adb.getprop('ro.product.model'))
+    if not os.path.exists(workout):
+        os.mkdir(workout)
+
+    module = [2, 3, 4, 5, 6]
+    selected = []
     if '-m' in opts:
         try:
             module = int(opts['-m'])
@@ -63,78 +72,57 @@ def main():
         print('    5. compatibility test')
         print('    6. boot time')
         print('    7. stress test')
-        try:
-            module = input('\nWhich would you like? [23456] ')
-        except SyntaxError:
-            pass
-        except NameError:
-            sys.exit(2)
+        selects = raw_input('\nWhich would you like? [2,3,4,5,6] ').split(',')
+        for select in selects:
+            try:
+                selected.append(int(select.strip()))
+            except ValueError:
+                continue
+        module = selected if selected else module
         print('')
 
-    operation = 2
-    if '4' in str(module):
-        if '-t' in opts:
-            try:
-                operation = int(opts['-t'])
-            except ValueError:
-                pass
-        else:
-            print('Monkey type choices are:')
-            print('    1. monkey')
-            print('    2. single')
-            try:
-                operation = input('\nWhich would you like? [2] ')
-            except SyntaxError:
-                pass
-            except NameError:
-                sys.exit(2)
-            print('')
-
-    workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-    workout = os.path.join(workdir, 'out')
-    if not os.path.exists(workout):
-        os.mkdir(workout)
-
-    workout = os.path.join(workout, adb.getprop('ro.product.model'))
-    #shutil.rmtree(workout, ignore_errors=True)
-    if not os.path.exists(workout):
-        os.mkdir(workout)
-
     adb.install(os.path.join(workdir, 'TestKit.apk'))
-    adb.push(os.path.join(workdir, 'automator.jar'), '/data/local/tmp')
+    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList')
+    time.sleep(3)
+    launchers = eval(adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/launcher'))
+    packages = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
+    packages = [package for package in packages if package in launchers]
 
+    executor = {}
+    for i in module:
+        if i == 1:
+            executor[i] = update.Executor(adb, workout)
+            executor[i].setup()
+        elif i == 2:
+            executor[i] = launch.Executor(adb, workout, packages, launchers)
+            executor[i].setup()
+        elif i == 3:
+            executor[i] = scenes.Executor(adb, workout)
+            executor[i].setup()
+        elif i == 4:
+            executor[i] = monkey.Executor(adb, workout, packages)
+            executor[i].setup()
+        elif i == 5:
+            executor[i] = compat.Executor(adb, workout)
+            executor[i].setup()
+        elif i == 6:
+            executor[i] = uptime.Executor(adb, workout)
+            executor[i].setup()
+        elif i == 7:
+            executor[i] = stress.Executor(adb, workout)
+            executor[i].setup()
+
+    adb.push(os.path.join(workdir, 'automator.jar'), '/data/local/tmp')
     adb.shellreadlines('uiautomator runtest automator.jar -c com.android.systemui.SleepWakeupTestCase#testWakeup')
     adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
     adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn')
 
-    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList')
-    time.sleep(3)
-    launchers = eval(adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/launcher'))
-
-    packages = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
-    packages = [package for package in packages if package in launchers]
-    begin = time.time()
-
-    for i in str(module):
+    start = time.time()
+    for i in module:
         adb.reboot()
         adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
-        if i == '1':
-            update.Executor(adb, workout).execute()
-        elif i == '2':
-            launch.Executor(adb, workout).execute(packages, launchers)
-        elif i == '3':
-            scenes.Executor(adb, workout).execute()
-        elif i == '4':
-            monkey.Executor(adb, workout).execute(packages, operation == 2)
-        elif i == '5':
-            compat.Executor(adb, workout).execute()
-        elif i == '6':
-            uptime.Executor(adb, workout).execute()
-        elif i == '7':
-            stress.Executor(adb, workout).execute()
-
-    raw_input('All test finished: elapsed time {0}s, press ENTER to exit.'.format(round(time.time() - begin, 2)))
-    adb.uninstall('com.ztemt.test.kit')
+        executor[i].execute()
+    end = time.time()
 
     # generate chart author by guomengru
     try:
@@ -142,6 +130,9 @@ def main():
         runner.run(workout)
     except ImportError:
         pass
+
+    raw_input('All test finished: elapsed time {0}s, press ENTER to exit.'.format(round(end - start, 2)))
+    adb.uninstall('com.ztemt.test.kit')
 
 if __name__ == '__main__':
     try:

@@ -176,9 +176,65 @@ class LogcatSkpinfoThread(threading.Thread):
 
 class Executor(object):
 
-    def __init__(self, adb, workout):
+    def __init__(self, adb, workout, packages):
         self.adb = adb
         self.workout = workout
+        self.packages = packages
+
+    def setup(self):
+        print('Monkey type choices are:')
+        print('    1. monkey')
+        print('    2. single')
+        try:
+            self.single = input('\nWhich would you like? [2] ') == 2
+        except SyntaxError:
+            self.single = True
+        except NameError:
+            sys.exit(2)
+        print('')
+
+        self.seed = 10
+        try:
+            self.seed = input('Monkey seed? [{0}] '.format(self.seed))
+        except SyntaxError:
+            pass
+        except NameError:
+            pass
+        print('')
+
+        self.throttle = 50
+        try:
+            self.throttle = input('Monkey throttle in milliseconds? [{0}] '.format(self.throttle))
+        except SyntaxError:
+            pass
+        except NameError:
+            pass
+        print('')
+
+        self.count = 200000 if self.single else 1000000
+        try:
+            self.count = input('Monkey count? [{0}] '.format(self.count))
+        except SynctaxError:
+            pass
+        except NameError:
+            pass
+        print('')
+
+        selected = []
+        print('Monkey package choices are:')
+        for i in range(len(self.packages)):
+            print('    {0:>2}. {1}'.format(i + 1, self.packages[i]))
+        options = ','.join([str(x) for x in range(1, len(self.packages) + 1)])
+        selects = raw_input('\nWhich would you like? [{0}] '.format(options)).split(',')
+        for select in selects:
+            try:
+                index = int(select.strip()) - 1
+                index = divmod(index, len(self.packages))[1]
+                selected.append(self.packages[index])
+            except ValueError:
+                continue
+        self.packages = selected if selected else self.packages
+        print('')
 
     def monkey(self, pardir, package=None):
         if package:
@@ -190,9 +246,9 @@ class Executor(object):
 
         self.adb.push(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'monkey.sh'), '/data/local/tmp')
         if package:
-            self.adb.shell('sh /data/local/tmp/monkey.sh {0}'.format(package))
+            self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2} {3}'.format(self.seed, self.throttle, self.count, package))
         else:
-            self.adb.shell('sh /data/local/tmp/monkey.sh')
+            self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2}'.format(self.seed, self.throttle, self.count))
 
         while True:
             self.adb.waitforboot(30)
@@ -277,7 +333,7 @@ class Executor(object):
             writer.writerow([crash_package, crash_type, crash_reason, anr_package, anr_reason, crash_package.split(' (')[0], anr_package.split(' (')[0]])
         report.close()
 
-    def execute(self, packages, single=False):
+    def execute(self):
         # eanble dumpsys gfxinfo
         self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
 
@@ -286,25 +342,8 @@ class Executor(object):
         if not os.path.exists(pardir):
             os.mkdir(pardir)
 
-        if not single:
-            threads = []
-            for package in packages:
-                outdir = os.path.join(pardir, package)
-                if not os.path.exists(outdir):
-                    os.mkdir(outdir)
-                t1 = DumpsysMeminfoThread(self.adb, outdir, package, 20)
-                t2 = DumpsysGfxinfoThread(self.adb, outdir, package,  5)
-                threads.append(t1)
-                threads.append(t2)
-                t1.start()
-                t2.start()
-            self.monkey(pardir)
-            for t in threads:
-                t.stop()
-            for t in threads:
-                t.join()
-        else:
-            for package in packages:
+        if self.single:
+            for package in self.packages:
                 outdir = os.path.join(pardir, package)
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
@@ -321,3 +360,20 @@ class Executor(object):
                 t1.join()
                 t2.join()
                 t3.join()
+        else:
+            threads = []
+            for package in self.packages:
+                outdir = os.path.join(pardir, package)
+                if not os.path.exists(outdir):
+                    os.mkdir(outdir)
+                t1 = DumpsysMeminfoThread(self.adb, outdir, package, 20)
+                t2 = DumpsysGfxinfoThread(self.adb, outdir, package,  5)
+                threads.append(t1)
+                threads.append(t2)
+                t1.start()
+                t2.start()
+            self.monkey(pardir)
+            for t in threads:
+                t.stop()
+            for t in threads:
+                t.join()

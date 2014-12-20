@@ -10,6 +10,9 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
+    def setup(self):
+        pass
+
     def execute(self):
         model = self.adb.getprop('ro.product.model')
         builddir = open(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'config.txt'), 'r').readlines()[7].strip()

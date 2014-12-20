@@ -16,6 +16,9 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
+    def setup(self):
+        pass
+
     def install(self, sdcard=False):
         launch = True
         except1 = except2 = except3 = None

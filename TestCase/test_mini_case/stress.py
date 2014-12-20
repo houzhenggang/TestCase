@@ -13,6 +13,9 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
+    def setup(self):
+        pass
+
     def execute(self):
         workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
         workdir = os.path.join(workdir, 'stress')

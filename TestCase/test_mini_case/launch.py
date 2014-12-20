@@ -9,9 +9,14 @@ import threading
 
 class Executor(object):
 
-    def __init__(self, adb, workout):
+    def __init__(self, adb, workout, packages, launchers):
         self.adb = adb
         self.workout = workout
+        self.packages = packages
+        self.launchers = launchers
+
+    def setup(self):
+        pass
 
     def startactivity(self, package, activity, cleartask=True):
         cmd = 'am start --user 0 -W {0} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {1}/{2}'.format(
@@ -51,14 +56,14 @@ class Executor(object):
         valid = valid if valid else [0]
         return (title, size, t, min(valid), max(valid), round(float(sum(valid)) / len(valid), 1))
 
-    def execute(self, packages, launchers):
+    def execute(self):
         report = open(os.path.join(self.workout, 'launch.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
         writer.writerow(['名称', '包大小', '第一次', '第二次', '第三次', '第四次', '第五次', '第六次', '最小值', '最大值', '平均值'])
 
-        for package in packages:
-            for item in launchers[package]:
+        for package in self.packages:
+            for item in self.launchers[package]:
                 r = self.appinfo(package, item['title'], item['activity'])
                 writer.writerow([r[0], r[1], r[2][0], r[2][1], r[2][2], r[2][3], r[2][4], r[2][5], r[3], r[4], r[5]])
                 report.flush()

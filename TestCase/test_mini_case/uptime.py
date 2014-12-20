@@ -12,6 +12,9 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
+    def setup(self):
+        pass
+
     def execute(self):
         report = open(os.path.join(self.workout, 'uptime.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
