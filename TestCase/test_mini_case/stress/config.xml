@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <item name="飞行模式测试">
+        <param name="次数" extra="--ei AirplaneModeTest_times" type="int">10</param>
+        <desc>开关飞行模式</desc>
+    </item>
+    <item name="蓝牙测试">
+        <param name="次数" extra="--ei BluetoothTest_times" type="int">10</param>
+        <desc>开关蓝牙</desc>
+    </item>
+    <item name="Wi-Fi测试">
+        <param name="次数" extra="--ei WifiTest_times" type="int">10</param>
+        <desc>开关Wi-Fi</desc>
+    </item>
+    <item name="铃声测试">
+        <param name="次数" extra="--ei RingtoneTest_times" type="int">10</param>
+        <desc>播放系统铃声</desc>
+    </item>
+    <item name="SD卡测试">
+        <param name="次数" extra="--ei SDCardTest_times" type="int">10</param>
+        <desc>卸载挂载SD卡</desc>
+    </item>
+    <item name="休眠唤醒测试">
+        <param name="次数" extra="--ei SleepWakeTest_times" type="int">10</param>
+        <desc>熄屏唤醒</desc>
+    </item>
+    <item name="通话测试">
+        <param name="次数" extra="--ei CallTest_times" type="int">10</param>
+        <param name="号码" extra="--es outgoing" type="phone">10086</param>
+        <desc>拨打电话（需插卡）；如果是多卡机，请都插上。</desc>
+    </item>
+    <item name="短信测试">
+        <param name="次数" extra="--ei SmsTest_times" type="int">10</param>
+        <desc>发送短信（需插卡）；如果是多卡机，请都插上。</desc>
+    </item>
+    <item name="重启测试">
+        <param name="次数" extra="--ei RebootTest_times" type="int">10</param>
+        <desc>重启</desc>
+    </item>
+    <item name="开机搜网测试">
+        <param name="次数" extra="--ei NetworkTest_times" type="int">10</param>
+        <desc>重启之后检测网络（需插卡）；如果是多卡机，请都插上。</desc>
+    </item>
+    <item name="基带版本测试">
+        <param name="次数" extra="--ei BasebandVersionTest_times" type="int">10</param>
+        <desc>重启之后检测基带版本</desc>
+    </item>
+    <item name="加速度传感器测试">
+        <param name="次数" extra="--ei AccelerometerSensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="呼吸灯测试">
+        <param name="次数" extra="--ei BreathinglightTest_times" type="int">10</param>
+        <desc>点亮关闭呼吸灯</desc>
+    </item>
+    <item name="摄像头测试">
+        <param name="次数" extra="--ei CameraTest_times" type="int">10</param>
+        <desc>切换摄像头并拍照</desc>
+    </item>
+    <item name="充电测试">
+        <param name="次数" extra="--ei ChargerTest_times" type="int">10</param>
+        <desc>检测充电器</desc>
+    </item>
+    <item name="电磁场传感器测试">
+        <param name="次数" extra="--ei CompassSensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="文件系统测试">
+        <param name="次数" extra="--ei FileSystemTest_times" type="int">10</param>
+        <desc>读写文件系统</desc>
+    </item>
+    <item name="陀螺仪传感器测试">
+        <param name="次数" extra="--ei GyroscopeSensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="湿度传感器测试">
+        <param name="次数" extra="--ei HumiditySensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="光线传感器测试">
+        <param name="次数" extra="--ei LightSensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="NFC测试">
+        <param name="次数" extra="--ei NfcTest_times" type="int">10</param>
+        <desc>开关NFC</desc>
+    </item>
+    <item name="压力传感器测试">
+        <param name="次数" extra="--ei PressureSensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="距离感应器测试">
+        <param name="次数" extra="--ei ProximitySensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="温度传感器测试">
+        <param name="次数" extra="--ei TemperatureSensorTest_times" type="int">10</param>
+        <desc>检测传感器数据上报</desc>
+    </item>
+    <item name="振动测试">
+        <param name="次数" extra="--ei VibratorTest_times" type="int">10</param>
+        <desc>振动</desc>
+    </item>
+    <item name="无线随机测试">
+        <param name="次数" extra="--ei WirelessTest_times" type="int">10</param>
+        <desc>随机开关Wi-Fi、蓝牙、数据业务</desc>
+    </item>
+    <item name="网络搜索测试">
+        <param name="次数" extra="--ei NetworkTest2_times" type="int">10</param>
+        <desc>开关飞行模式后检测网络（需插卡）；如果是多卡机，请都插上。</desc>
+    </item>
+    <item name="数据业务测试">
+        <param name="次数" extra="--ei DataTest_times" type="int">10</param>
+        <desc>切换数据业务之后检测数据（需插卡）；如果是多卡机，请都插上。</desc>
+    </item>
+    <item name="最长搜网时间测试">
+        <param name="次数" extra="--ei NetworkTest3_times" type="int">10</param>
+        <desc>统计最长搜网时间（需插卡）；如果是多卡机，请都插上。</desc>
+    </item>
+</root>

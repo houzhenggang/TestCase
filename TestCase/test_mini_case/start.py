@@ -6,8 +6,9 @@ import shutil
 import sys
 import time
 
-import adbkit as adb
+import adbkit
 import compat
+import monkey
 import launch
 import scenes
 import stress
@@ -21,14 +22,14 @@ def main():
     except getopt.GetoptError:
         sys.exit(2)
 
-    devices = adb.devices()
-    adb.sno = opts['-s'] if '-s' in opts else ''
-    if not adb.sno:
+    devices = adbkit.devices()
+    serialno = opts['-s'] if '-s' in opts else ''
+    if not serialno and len(devices) > 0:
         index = 0
         if len(devices) > 1:
             print('Device serial number choices are:')
             for i in range(len(devices)):
-                print('    {0}. {1}'.format(i + 1, devices[i][0]))
+                print('    {0}. {1}'.format(i + 1, devices[i]))
             try:
                 index = input('\nWhich would you like? [1] ') - 1
                 index = divmod(index, len(devices))[1]
@@ -37,11 +38,12 @@ def main():
             except NameError:
                 pass
             print('')
-        adb.sno = devices[index][0]
+        serialno = devices[index]
 
-    if adb.adb('get-state')[-1].strip() != 'device':
-        if adb.sno:
-            print('Make sure your device {0} only online'.format(adb.sno))
+    adb = adbkit.Adb(serialno)
+    if adb.adbreadline('get-state') != 'device':
+        if serialno:
+            print('Make sure your device {0} only online'.format(serialno))
         else:
             print('Please connect your device')
         sys.exit(2)
@@ -60,6 +62,7 @@ def main():
         print('    4. monkey test')
         print('    5. compatibility test')
         print('    6. boot time')
+        print('    7. stress test')
         try:
             module = input('\nWhich would you like? [23456] ')
         except SyntaxError:
@@ -100,33 +103,35 @@ def main():
     adb.install(os.path.join(workdir, 'TestKit.apk'))
     adb.push(os.path.join(workdir, 'automator.jar'), '/data/local/tmp')
 
-    adb.shell('uiautomator runtest automator.jar -c com.android.systemui.SleepWakeupTestCase#testWakeup')
-    adb.shell('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
-    adb.shell('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn')
+    adb.shellreadlines('uiautomator runtest automator.jar -c com.android.systemui.SleepWakeupTestCase#testWakeup')
+    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+    adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn')
 
-    adb.shell('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList')
+    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList')
     time.sleep(3)
-    launchers = eval(adb.shell('cat /data/data/com.ztemt.test.kit/files/launcher')[0])
+    launchers = eval(adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/launcher'))
 
-    packages = [line[8:].strip() for line in adb.shell('pm list package -s')]
+    packages = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
     packages = [package for package in packages if package in launchers]
     begin = time.time()
 
     for i in str(module):
         adb.reboot()
-        adb.shell('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
         if i == '1':
-            update.execute(workout)
+            update.Executor(adb, workout).execute()
         elif i == '2':
-            launch.execute(workout, packages, launchers)
+            launch.Executor(adb, workout).execute(packages, launchers)
         elif i == '3':
-            scenes.execute(workout)
+            scenes.Executor(adb, workout).execute()
         elif i == '4':
-            stress.execute(workout, packages, operation == 2)
+            monkey.Executor(adb, workout).execute(packages, operation == 2)
         elif i == '5':
-            compat.execute(workout)
+            compat.Executor(adb, workout).execute()
         elif i == '6':
-            uptime.execute(workout)
+            uptime.Executor(adb, workout).execute()
+        elif i == '7':
+            stress.Executor(adb, workout).execute()
 
     raw_input('All test finished: elapsed time {0}s, press ENTER to exit.'.format(round(time.time() - begin, 2)))
     adb.uninstall('com.ztemt.test.kit')
