@@ -12,9 +12,9 @@ import com.android.uiautomator.core.UiObject;
 import com.android.uiautomator.core.UiObjectNotFoundException;
 import com.android.uiautomator.core.UiScrollable;
 import com.android.uiautomator.core.UiSelector;
-import com.android.uiautomator.testrunner.UiAutomatorTestCase;
+import com.ztemt.test.automator.AutomatorTestCase;
 
-public class A1SDBenchTestCase extends UiAutomatorTestCase {
+public class A1SDBenchTestCase extends AutomatorTestCase {
 
     private static final String BENCHMARK = "/data/local/tmp/a1sdbenchmark";
 

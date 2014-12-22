@@ -193,6 +193,7 @@ class Executor(object):
             sys.exit(2)
         print('')
 
+        print('Parameters for monkey:')
         self.seed = 10
         try:
             self.seed = input('Monkey seed? [{0}] '.format(self.seed))
@@ -200,8 +201,6 @@ class Executor(object):
             pass
         except NameError:
             pass
-        print('')
-
         self.throttle = 50
         try:
             self.throttle = input('Monkey throttle in milliseconds? [{0}] '.format(self.throttle))
@@ -209,12 +208,10 @@ class Executor(object):
             pass
         except NameError:
             pass
-        print('')
-
         self.count = 200000 if self.single else 1000000
         try:
             self.count = input('Monkey count? [{0}] '.format(self.count))
-        except SynctaxError:
+        except SyntaxError:
             pass
         except NameError:
             pass
@@ -251,7 +248,7 @@ class Executor(object):
             self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2}'.format(self.seed, self.throttle, self.count))
 
         while True:
-            self.adb.waitforboot(30)
+            self.adb.waitforboot()
             if 'com.android.commands.monkey' not in [x.split()[-1] for x in self.adb.shellreadlines('ps')]:
                 break
             time.sleep(30)
@@ -314,7 +311,7 @@ class Executor(object):
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
         writer.writerow(['测试的随机数', '预期测试次数', '实际次数', '测试时间', 'CRASH次数', 'NOT RESPONDING次数'])
         writer.writerow([data['seed'], data['count'], data['event'], round(data['time'] / 3600000.0, 2), data['crash'], data['anr']])
-        writer.writerow(['异常的模块名', '异常的类型', '异常的原因', '不响应的模块名', '不响应的原因', '异常的模块名不带PID用于汇总', '不响应的模块名不带PID用于汇总'])
+        writer.writerow(['异常的模块名', '异常的模块版本', '异常的类型', '异常的原因', '不响应的模块名', '不响应的模块版本', '不响应的原因', '异常的模块名不带PID用于汇总', '不响应的模块名不带PID用于汇总'])
         for i in range(max(len(crashs), len(anrs))):
             if i < len(crashs):
                 crash_package = crashs[i]['package']
@@ -330,10 +327,27 @@ class Executor(object):
             else:
                 anr_package = ''
                 anr_reason = ''
-            writer.writerow([crash_package, crash_type, crash_reason, anr_package, anr_reason, crash_package.split(' (')[0], anr_package.split(' (')[0]])
+            crash_package_no_pid = crash_package.split(' (')[0]
+            crash_package_real = crash_package_no_pid.split(':')[-1].strip()
+            if crash_package_real in self.pkgs:
+                crash_package_version = self.pkgs[crash_package_real]['versionName']
+            else:
+                crash_package_version = ''
+            anr_package_no_pid = anr_package.split(' (')[0]
+            anr_package_real = anr_package_no_pid.split(':')[-1].strip()
+            if anr_package_real in self.pkgs:
+                anr_package_version = self.pkgs[anr_package_real]['versionName']
+            else:
+                anr_package_version = ''
+            writer.writerow([crash_package, crash_package_version, crash_type, crash_reason, anr_package, anr_package_version, anr_reason, crash_package_no_pid, anr_package_no_pid])
         report.close()
 
     def execute(self):
+        # temp code
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getPackageList')
+        time.sleep(3)
+        self.pkgs = eval(self.adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/packages'))
+
         # eanble dumpsys gfxinfo
         self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
 

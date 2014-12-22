@@ -7,9 +7,9 @@ import android.os.RemoteException;
 import com.android.uiautomator.core.UiObject;
 import com.android.uiautomator.core.UiObjectNotFoundException;
 import com.android.uiautomator.core.UiSelector;
-import com.android.uiautomator.testrunner.UiAutomatorTestCase;
+import com.ztemt.test.automator.AutomatorTestCase;
 
-public class MultiTaskTestCase extends UiAutomatorTestCase {
+public class MultiTaskTestCase extends AutomatorTestCase {
 
     public void testRecycle() throws IOException, InterruptedException,
             UiObjectNotFoundException, RemoteException {

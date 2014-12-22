@@ -65,16 +65,10 @@ class Adb(object):
     def setprop(self, key, value):
         self.shellreadline('setprop {0} \"{1}\"'.format(key, value))
 
-    def waitfordevice(self):
+    def waitforboot(self, interval=30):
         self.adb('wait-for-device')
-
-    def waitforboot(self, interval=3):
-        self.waitfordevice()
-        while not self.bootcompleted():
+        while self.getprop('sys.boot_completed') != '1':
             time.sleep(interval)
-
-    def bootcompleted(self):
-        return self.getprop('sys.boot_completed') == '1'
 
     def reboot(self):
         self.adb('reboot')
@@ -85,9 +79,31 @@ class Adb(object):
         self.shell('screencap -p {0}'.format(screenshot))
         self.pull(screenshot, local)
 
-    def kill(self, proc):
-        for pid in [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == proc]:
-            self.shell('kill {0}'.format(pid))
+    def startactivity(self, intent):
+        return self.shellreadlines('am start --user 0 -W {0}'.format(intent))
+
+    def startservice(self, intent):
+        return self.shellreadlines('am startservice --user 0 -W {0}'.format(intent))
+
+class Uia(object):
+
+    def __init__(self, adb, jar):
+        self.adb = adb
+        self.jar = jar
+        self.adb.push(self.jar, '/data/local/tmp')
+
+    def runtest(self, clsname, method, extras):
+        self.adb.shellreadlines('uiautomator runtest {0} -c {1}{2} {3}'.format(os.path.basename(self.jar), clsname, '#' + method if method else '', ' '.join(extras)))
+
+    def destroy(self):
+        self.adb.shell('rm -f /data/local/tmp/{0}'.format(os.path.basename(self.jar)))
+
+class Apk(object):
+
+    def __init__(self, adb, apk):
+        self.adb = adb
+        self.apk = apk
+        self.adb.install(self.apk)
 
 if __name__ == '__main__':
     print(devices())

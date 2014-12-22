@@ -7,9 +7,9 @@ import com.android.uiautomator.core.UiObject;
 import com.android.uiautomator.core.UiObjectNotFoundException;
 import com.android.uiautomator.core.UiScrollable;
 import com.android.uiautomator.core.UiSelector;
-import com.android.uiautomator.testrunner.UiAutomatorTestCase;
+import com.ztemt.test.automator.AutomatorTestCase;
 
-public class SystemUpdateTestCase extends UiAutomatorTestCase {
+public class SystemUpdateTestCase extends AutomatorTestCase {
 
     @Override
     protected void setUp() throws Exception {

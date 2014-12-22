@@ -2,9 +2,9 @@ package com.android.systemui;
 
 import android.os.RemoteException;
 
-import com.android.uiautomator.testrunner.UiAutomatorTestCase;
+import com.ztemt.test.automator.AutomatorTestCase;
 
-public class SleepWakeupTestCase extends UiAutomatorTestCase {
+public class SleepWakeupTestCase extends AutomatorTestCase {
 
     public void testSleep() throws RemoteException {
         getUiDevice().sleep();

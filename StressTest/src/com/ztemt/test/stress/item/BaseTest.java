@@ -100,7 +100,7 @@ public abstract class BaseTest {
     }
 
     public int getTotalTimes() {
-        return mPrefUtils.getInt(mTimes, 1);
+        return mPrefUtils.getInt(mTimes, 0);
     }
 
     public void setTotalTimes(int value) {
@@ -108,7 +108,7 @@ public abstract class BaseTest {
     }
 
     public boolean isEnabled() {
-        return mPrefUtils.getBoolean(mEnabled, true);
+        return mPrefUtils.getBoolean(mEnabled, false);
     }
 
     public void setEnabled(boolean enabled) {
@@ -127,16 +127,16 @@ public abstract class BaseTest {
         if (bundle == null) return;
 
         if (bundle.containsKey(mTimes)) {
-            setTotalTimes(bundle.getInt(mTimes, 10));
-            setEnabled(bundle.getInt(mTimes, 10) > 0);
+            setTotalTimes(bundle.getInt(mTimes, 0));
+            setEnabled(bundle.getInt(mTimes, 0) > 0);
         } else if (bundle.containsKey(TIMES)) {
-            setTotalTimes(bundle.getInt(TIMES, 10));
-            setEnabled(bundle.getInt(TIMES, 10) > 0);
+            setTotalTimes(bundle.getInt(TIMES, 0));
+            setEnabled(bundle.getInt(TIMES, 0) > 0);
         }
         if (bundle.containsKey(mEnabled)) {
-            setEnabled(bundle.getBoolean(mEnabled, true));
+            setEnabled(bundle.getBoolean(mEnabled, false));
         } else if (bundle.containsKey(ENABLED)) {
-            setEnabled(bundle.getBoolean(ENABLED, true));
+            setEnabled(bundle.getBoolean(ENABLED, false));
         }
         if (bundle.containsKey(mOrdinal)) {
             setOrdinal(bundle.getInt(mOrdinal));
