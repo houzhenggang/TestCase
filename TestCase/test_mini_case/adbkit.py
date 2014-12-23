@@ -92,8 +92,9 @@ class Uia(object):
         self.jar = jar
         self.adb.push(self.jar, '/data/local/tmp')
 
-    def runtest(self, clsname, method, extras):
-        self.adb.shellreadlines('uiautomator runtest {0} -c {1}{2} {3}'.format(os.path.basename(self.jar), clsname, '#' + method if method else '', ' '.join(extras)))
+    def runtest(self, clsname, method=None, extras=None):
+        return self.adb.shellreadlines('uiautomator runtest {0} -c {1}{2} {3}'.format(os.path.basename(self.jar), clsname,
+                '#' + method if method else '', ' '.join(extras) if extras else ''))
 
     def destroy(self):
         self.adb.shell('rm -f /data/local/tmp/{0}'.format(os.path.basename(self.jar)))

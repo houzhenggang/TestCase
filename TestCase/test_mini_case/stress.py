@@ -1,6 +1,7 @@
 # -*- coding:UTF-8 -*-
 
 import codecs
+import csv
 import os
 import sys
 import time
@@ -71,7 +72,6 @@ class Executor(object):
         if self.extras:
             tags = self.adb.getprop('ro.build.tags')
             self.adb.uninstall('com.ztemt.test.stress')
-            self.adb.install(os.path.join(self.workdir, 'SettingsTest_{0}.apk'.format(tags)))
             self.adb.install(os.path.join(self.workdir, 'StressTest_{0}.apk'.format(tags)))
             self.adb.shellreadlines('am start --user 0 -n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)))
             while True:
@@ -82,16 +82,37 @@ class Executor(object):
                 time.sleep(30)
             self.adb.uninstall('com.ztemt.test.stress')
 
-            lines = open(stress, 'r').readlines()
+            output = open(stress, 'r')
+            lines = output.readlines()
+            output.close()
             report = open(stress, 'wb')
             report.write(codecs.BOM_UTF8)
             report.writelines(lines)
             report.close()
         if self.uiauto:
+            if os.path.exists(stress):
+                report = open(stress, 'ab+')
+                writer = csv.writer(report, quoting=csv.QUOTE_ALL)
+            else:
+                report = open(stress, 'wb')
+                report.write(codecs.BOM_UTF8)
+                writer = csv.writer(report, quoting=csv.QUOTE_ALL)
+                writer.writerow(['测试项', '总次数', '测试次数', '成功次数', '失败次数'])
             for item in self.uiauto:
                 es = []
                 for param in item.findall('param'):
                     es.append('{0} {1}'.format(param.attrib['extra'], param.text))
                 uia = adbkit.Uia(self.adb, os.path.join(self.workdir, item.find('jar').text))
-                uia.runtest(item.find('class').text, item.find('method').text, es)
+                success = 0
+                failure = 0
+                total = 0
+                for line in uia.runtest(item.find('class').text, item.find('method').text, es):
+                    if line.startswith('RESULT='):
+                        result = eval(line.split('=')[-1])
+                        success = result['SUCCESS']
+                        failure = result['FAILURE']
+                        total = result['TOTAL']
+                writer.writerow([item.attrib['name'].encode('utf-8'), total, success + failure, success, failure])
+                report.flush()
                 uia.destroy()
+            report.close()

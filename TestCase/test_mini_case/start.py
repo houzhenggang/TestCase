@@ -8,6 +8,7 @@ import time
 
 import adbkit
 import compat
+import memory
 import monkey
 import launch
 import scenes
@@ -72,6 +73,7 @@ def main():
         print('    5. compatibility test')
         print('    6. boot time')
         print('    7. stress test')
+        print('    8. memory test')
         selects = raw_input('\nWhich would you like? [2,3,4,5,6] ').split(',')
         for select in selects:
             try:
@@ -110,6 +112,9 @@ def main():
             executor[i].setup()
         elif i == 7:
             executor[i] = stress.Executor(adb, workout)
+            executor[i].setup()
+        elif i == 8:
+            executor[i] = memory.Executor(adb, workout, packages)
             executor[i].setup()
 
     adb.push(os.path.join(workdir, 'automator.jar'), '/data/local/tmp')

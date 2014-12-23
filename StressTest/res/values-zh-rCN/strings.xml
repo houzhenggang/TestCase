@@ -42,6 +42,6 @@
     <string name="network_test3">最长搜网时间测试</string>
     <string name="data_test">数据业务测试</string>
     <string name="baseband_version_test">基带版本测试</string>
-    <string name="report_titles">\"序号\",\"测试项\",\"总次数\",\"测试次数\",\"成功次数\",\"失败次数\"\n</string>
+    <string name="report_titles">\"测试项\",\"总次数\",\"测试次数\",\"成功次数\",\"失败次数\"\n</string>
 
 </resources>

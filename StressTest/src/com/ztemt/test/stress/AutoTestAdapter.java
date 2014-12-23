@@ -188,11 +188,13 @@ public class AutoTestAdapter extends BaseAdapter {
             BufferedWriter bw = new BufferedWriter(new FileWriter(file));
             bw.write(mContext.getString(R.string.report_titles));
             for (int i = 0; i < mTests.length; i++) {
-                bw.write("\"" + (i + 1) + "\",\"" + mTests[i].getTitle()
-                        + "\",\"" + mTests[i].getTotalTimes() + "\",\""
-                        + mTests[i].getTestTimes() + "\",\""
-                        + mTests[i].getSuccessTimes() + "\",\""
-                        + mTests[i].getFailureTimes() + "\"\n");
+                if (mTests[i].getTotalTimes() > 0) {
+                    bw.write("\"" + mTests[i].getTitle() + "\",\""
+                            + mTests[i].getTotalTimes() + "\",\""
+                            + mTests[i].getTestTimes() + "\",\""
+                            + mTests[i].getSuccessTimes() + "\",\""
+                            + mTests[i].getFailureTimes() + "\"\n");
+                }
             }
             bw.close();
             file.setReadable(true, false);

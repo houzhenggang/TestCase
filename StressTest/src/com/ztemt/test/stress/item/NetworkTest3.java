@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.SystemClock;
 import android.provider.Settings;
-import android.telephony.MSimTelephonyManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
@@ -18,14 +17,7 @@ public class NetworkTest3 extends BaseTest {
 
     private static final String LOG_TAG = "NetworkTest3";
 
-    private MSimTelephonyManager mMSTM;
     private TelephonyManager mTM;
-
-    private PhoneStateListener mPhoneStateListener1 = null;
-    private PhoneStateListener mPhoneStateListener2 = null;
-
-    private boolean mStateInService1;
-    private boolean mStateInService2;
 
     private long mMaxTime;
     private long mPreTime;
@@ -47,39 +39,7 @@ public class NetworkTest3 extends BaseTest {
     public NetworkTest3(Context context) {
         super(context);
 
-        mMSTM = (MSimTelephonyManager) mContext.getSystemService("phone_msim");
         mTM = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-
-        try {
-            mPhoneStateListener1 = new PhoneStateListener(0) {
-    
-                @Override
-                public void onServiceStateChanged(ServiceState serviceState) {
-                    int state = serviceState.getState();
-    
-                    if (state == ServiceState.STATE_IN_SERVICE) {
-                        mMSTM.listen(this, LISTEN_NONE);
-                        mStateInService1 = true;
-                        multiSuccessResume();
-                    }
-                }
-            };
-            mPhoneStateListener2 = new PhoneStateListener(1) {
-    
-                @Override
-                public void onServiceStateChanged(ServiceState serviceState) {
-                    int state = serviceState.getState();
-    
-                    if (state == ServiceState.STATE_IN_SERVICE) {
-                        mMSTM.listen(this, LISTEN_NONE);
-                        mStateInService2 = true;
-                        multiSuccessResume();
-                    }
-                }
-            };
-        } catch (NoSuchMethodError e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -91,25 +51,9 @@ public class NetworkTest3 extends BaseTest {
         setAirplaneModeOn(false);
         setTimeout(600000);
         mPreTime = SystemClock.elapsedRealtime();
-        if (mMSTM.isMultiSimEnabled()) {
-            mStateInService1 = false;
-            mStateInService2 = false;
-            if (mPhoneStateListener1 != null) {
-                mMSTM.listen(mPhoneStateListener1, PhoneStateListener.LISTEN_SERVICE_STATE);
-                mMSTM.listen(mPhoneStateListener2, PhoneStateListener.LISTEN_SERVICE_STATE);
-                pause();
-                mMSTM.listen(mPhoneStateListener1, PhoneStateListener.LISTEN_NONE);
-                mMSTM.listen(mPhoneStateListener2, PhoneStateListener.LISTEN_NONE);
-            } else {
-                mStateInService1 = true;
-                mStateInService2 = true;
-                multiSuccessResume();
-            }
-        } else {
-            mTM.listen(mPhoneStateListener, PhoneStateListener.LISTEN_SERVICE_STATE);
-            pause();
-            mTM.listen(mPhoneStateListener, PhoneStateListener.LISTEN_NONE);
-        }
+        mTM.listen(mPhoneStateListener, PhoneStateListener.LISTEN_SERVICE_STATE);
+        pause();
+        mTM.listen(mPhoneStateListener, PhoneStateListener.LISTEN_NONE);
         if (getTestTimes() >= getTotalTimes()) {
             Log.d(LOG_TAG, "The longest time of search network is " + mMaxTime + "ms");
         }
@@ -163,12 +107,5 @@ public class NetworkTest3 extends BaseTest {
                     Settings.Global.AIRPLANE_MODE_ON, 0);
         }
         return mode == 1;
-    }
-
-    private void multiSuccessResume() {
-        if (mStateInService1 && mStateInService2) {
-            setSuccess();
-            resume();
-        }
     }
 }

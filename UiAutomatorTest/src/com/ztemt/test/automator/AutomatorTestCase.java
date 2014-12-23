@@ -29,6 +29,7 @@ public class AutomatorTestCase extends UiAutomatorTestCase implements UiWatcher 
             } catch (UiObjectNotFoundException e) {
                 e.printStackTrace();
             }
+            return true;
         } else if (security.exists()) {
             UiObject remember = new UiObject(new UiSelector().resourceId(
                     "android:id/permission_remember_choice_checkbox"));
@@ -46,10 +47,9 @@ public class AutomatorTestCase extends UiAutomatorTestCase implements UiWatcher 
             } catch (UiObjectNotFoundException e) {
                 e.printStackTrace();
             }
-        } else {
-            getUiDevice().pressBack();
+            return true;
         }
-        return true;
+        return false;
     }
 
     @Override
