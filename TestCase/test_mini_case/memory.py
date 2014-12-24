@@ -10,6 +10,7 @@ import threading
 import time
 
 import adbkit
+import monkey
 
 class DumpsysMeminfoThread(threading.Thread):
 
@@ -129,17 +130,20 @@ class Executor(object):
         anrs = 0
         if package == 'com.android.systemui':
             uia = adbkit.Uia(self.adb, os.path.join(workdir, 'memory', 'systemui.jar'))
-            uia.runtest('cn.nubia.systemui.test.StatusBar')
-            uia.runtest('cn.nubia.systemui.test.MultiTaskTest')
+            uia.runtest('cn.nubia.systemui.test.StatusBar', extras=['-e Cycle 10'])
+            uia.runtest('cn.nubia.systemui.test.MultiTaskTest', extras=['-e Cycle 10'])
             uia.destroy()
         else:
             self.adb.push(os.path.join(workdir, 'monkey.sh'), '/data/local/tmp')
-            self.adb.shell('sh /data/local/tmp/monkey.sh 13 100 1000 {0}'.format(package))
+            t = monkey.MonkeyMonitorThread(self.adb, [package], 600)
+            t.start()
+            self.adb.shell('sh /data/local/tmp/monkey.sh 13 100 200000 {0}'.format(package))
             while True:
                 self.adb.waitforboot()
                 if 'com.android.commands.monkey' not in [x.split()[-1] for x in self.adb.shellreadlines('ps')]:
                     break
                 time.sleep(30)
+            t.stop()
             file = os.path.join(outdir, 'monkey.txt')
             self.adb.pull('/data/local/tmp/monkey.txt', file)
             output = open(file, 'r')

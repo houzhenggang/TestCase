@@ -183,7 +183,7 @@ public class AutoTestAdapter extends BaseAdapter {
     }
 
     public void saveReport() {
-        File file = mContext.getFileStreamPath("stress.csv");
+        File file = new File(mContext.getExternalFilesDir(""), "stress.csv");
         try {
             BufferedWriter bw = new BufferedWriter(new FileWriter(file));
             bw.write(mContext.getString(R.string.report_titles));
@@ -197,7 +197,6 @@ public class AutoTestAdapter extends BaseAdapter {
                 }
             }
             bw.close();
-            file.setReadable(true, false);
         } catch (IOException e) {
             e.printStackTrace();
         }

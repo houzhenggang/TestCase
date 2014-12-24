@@ -1,5 +1,7 @@
 package com.ztemt.test.stress.item;
 
+import java.lang.reflect.Method;
+
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
@@ -44,11 +46,11 @@ public class DataTest extends BaseTest {
             mWM.setWifiEnabled(false);
         }
 
-        if (mCM.getMobileDataEnabled()) {
-            mCM.setMobileDataEnabled(false);
+        if (getMobileDataEnabled()) {
+            setMobileDataEnabled(false);
             sleep(3000);
         }
-        mCM.setMobileDataEnabled(true);
+        setMobileDataEnabled(true);
         setTimeout(120000);
         mTM.listen(mPhoneStateListener, PhoneStateListener.LISTEN_DATA_CONNECTION_STATE);
         pause();
@@ -65,5 +67,25 @@ public class DataTest extends BaseTest {
         super.setFailure();
         Log.e(LOG_TAG, "data state isn't connected");
         sleep(10000);
+    }
+
+    private boolean getMobileDataEnabled() {
+        try {
+            Method m = ConnectivityManager.class.getMethod("getMobileDataEnabled");
+            return (Boolean) m.invoke(mCM);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private void setMobileDataEnabled(boolean enabled) {
+        try {
+            Method m = ConnectivityManager.class.getMethod(
+                    "setMobileDataEnabled", Boolean.TYPE);
+            m.invoke(mCM, enabled);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, e.getMessage(), e);
+        }
     }
 }

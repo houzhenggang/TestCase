@@ -24,6 +24,7 @@ class DumpsysMeminfoThread(threading.Thread):
         output = open(os.path.join(self.outdir, 'meminfo.txt'), 'w')
         while self.loop:
             time.sleep(self.interval)
+            self.adb.waitforboot()
             self.adb.shellopen('dumpsys meminfo {0}'.format(self.package), stdout=output, stderr=output).wait()
         output.close()
 
@@ -76,6 +77,7 @@ class DumpsysGfxinfoThread(threading.Thread):
         output = open(os.path.join(self.outdir, 'gfxinfo.txt'), 'w')
         while self.loop:
             time.sleep(self.interval)
+            self.adb.waitforboot()
             self.adb.shellopen('dumpsys gfxinfo {0}'.format(self.package), stdout=output, stderr=output).wait()
         output.close()
 
@@ -174,6 +176,27 @@ class LogcatSkpinfoThread(threading.Thread):
     def stop(self):
         self.p.terminate()
 
+class MonkeyMonitorThread(threading.Thread):
+
+    def __init__(self, adb, packages, interval):
+        threading.Thread.__init__(self)
+        self.adb = adb
+        self.packages = packages
+        self.interval = interval
+        self.loop = True
+
+    def run(self):
+        while self.loop:
+            self.adb.waitforboot()
+            line = self.adb.shellreadline('uiautomator dump')
+            if line == 'ERROR: null root node returned by UiTestAutomationBridge.':
+                for package in self.packages:
+                    self.adb.shell('am force-stop {0}'.format(package))
+            time.sleep(self.interval)
+
+    def stop(self):
+        self.loop = False
+
 class Executor(object):
 
     def __init__(self, adb, workout, packages):
@@ -217,21 +240,22 @@ class Executor(object):
             pass
         print('')
 
-        selected = []
-        print('Monkey package choices are:')
-        for i in range(len(self.packages)):
-            print('    {0:>2}. {1}'.format(i + 1, self.packages[i]))
-        options = ','.join([str(x) for x in range(1, len(self.packages) + 1)])
-        selects = raw_input('\nWhich would you like? [{0}] '.format(options)).split(',')
-        for select in selects:
-            try:
-                index = int(select.strip()) - 1
-                index = divmod(index, len(self.packages))[1]
-                selected.append(self.packages[index])
-            except ValueError:
-                continue
-        self.packages = selected if selected else self.packages
-        print('')
+        if self.single:
+            selected = []
+            print('Monkey package choices are:')
+            for i in range(len(self.packages)):
+                print('    {0:>2}. {1}'.format(i + 1, self.packages[i]))
+            options = ','.join([str(x) for x in range(1, len(self.packages) + 1)])
+            selects = raw_input('\nWhich would you like? [{0}] '.format(options)).split(',')
+            for select in selects:
+                try:
+                    index = int(select.strip()) - 1
+                    index = divmod(index, len(self.packages))[1]
+                    selected.append(self.packages[index])
+                except ValueError:
+                    continue
+            self.packages = selected if selected else self.packages
+            print('')
 
     def monkey(self, pardir, package=None):
         if package:
@@ -243,8 +267,12 @@ class Executor(object):
 
         self.adb.push(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'monkey.sh'), '/data/local/tmp')
         if package:
+            t = MonkeyMonitorThread(self.adb, [package], 600)
+            t.start()
             self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2} {3}'.format(self.seed, self.throttle, self.count, package))
         else:
+            t = MonkeyMonitorThread(self.adb, self.packages, 600)
+            t.start()
             self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2}'.format(self.seed, self.throttle, self.count))
 
         while True:
@@ -252,6 +280,7 @@ class Executor(object):
             if 'com.android.commands.monkey' not in [x.split()[-1] for x in self.adb.shellreadlines('ps')]:
                 break
             time.sleep(30)
+        t.stop()
 
         self.adb.pull('/data/local/tmp/monkey.txt', outdir)
         output = open(os.path.join(outdir, 'monkey.txt'), 'r')

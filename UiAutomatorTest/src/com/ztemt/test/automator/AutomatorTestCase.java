@@ -55,7 +55,13 @@ public class AutomatorTestCase extends UiAutomatorTestCase implements UiWatcher 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
         getUiDevice().registerWatcher("auto", this);
+
+        UiObject button1 = new UiObject(new UiSelector().resourceId("android:id/button1"));
+        if (button1.exists()) {
+            button1.click();
+        }
     }
 
     @Override

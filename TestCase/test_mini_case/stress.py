@@ -76,7 +76,7 @@ class Executor(object):
             self.adb.shellreadlines('am start --user 0 -n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)))
             while True:
                 self.adb.waitforboot()
-                self.adb.pull('/data/data/com.ztemt.test.stress/files/stress.csv', stress)
+                self.adb.pull('/sdcard/Android/data/com.ztemt.test.stress/files/stress.csv', stress)
                 if os.path.exists(stress):
                     break
                 time.sleep(30)
