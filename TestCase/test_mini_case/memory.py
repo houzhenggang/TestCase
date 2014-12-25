@@ -135,7 +135,7 @@ class Executor(object):
             uia.destroy()
         else:
             self.adb.push(os.path.join(workdir, 'monkey.sh'), '/data/local/tmp')
-            t = monkey.MonkeyMonitorThread(self.adb, [package], 600)
+            t = monkey.MonkeyMonitorThread(self.adb, 600)
             t.start()
             self.adb.shell('sh /data/local/tmp/monkey.sh 13 100 200000 {0}'.format(package))
             while True:
@@ -153,7 +153,6 @@ class Executor(object):
                 elif line.find('// NOT RESPONDING:') > -1:
                     anrs += 1
             output.close()
-            os.remove(file)
         return (crashs, anrs)
 
     def execute(self):
@@ -161,6 +160,9 @@ class Executor(object):
         shutil.rmtree(self.workout, ignore_errors=True)
         if not os.path.exists(self.workout):
             os.mkdir(self.workout)
+
+        self.adb.reboot(30)
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
 
         time.sleep(5)
         self.meminfo('开机启动进程及内存占用')

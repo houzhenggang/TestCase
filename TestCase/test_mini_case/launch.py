@@ -57,6 +57,9 @@ class Executor(object):
         return (title, size, t, min(valid), max(valid), round(float(sum(valid)) / len(valid), 1))
 
     def execute(self):
+        self.adb.reboot(30)
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+
         report = open(os.path.join(self.workout, 'launch.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)

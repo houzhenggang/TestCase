@@ -15,16 +15,18 @@ public class RestoreTestCase extends AutomatorTestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        String cmd = "am start --activity-clear-task -n cn.nubia.databackup/.ui.MainActivity";
-        Process p = Runtime.getRuntime().exec(cmd);
-        p.waitFor();
+        String cmd1 = "am start --activity-clear-task -n cn.nubia.databackup/.ui.MainActivity";
+        Process p1 = Runtime.getRuntime().exec(cmd1);
+        p1.waitFor();
+        String cmd2 = "am start --activity-clear-task -n cn.nubia.databackup/.ui.LauncherActivity";
+        Process p2 = Runtime.getRuntime().exec(cmd2);
+        p2.waitFor();
 
         sleep(3000);
     }
 
     public void testRestore() throws UiObjectNotFoundException {
-        UiObject title = new UiObject(new UiSelector().resourceId(
-                "cn.nubia.databackup:id/title").text("还原"));
+        UiObject title = new UiObject(new UiSelector().text("还原"));
         title.clickAndWaitForNewWindow();
 
         UiScrollable list = new UiScrollable(new UiSelector().resourceId(

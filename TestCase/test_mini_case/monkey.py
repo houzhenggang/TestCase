@@ -87,15 +87,21 @@ class DumpsysGfxinfoThread(threading.Thread):
         for line in output.readlines():
             if line.startswith('Profile data in ms:') or line.startswith('No process found for:'):
                 i += 1
+            m = re.match('(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)', line.strip())
+            if m:
+                g = m.groups()
+                list.append((float(g[0]), float(g[1]), float(g[2]), float(g[3]), i))
+                continue
             m = re.match('(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)', line.strip())
             if m:
-                list.append((float(m.groups()[0]), float(m.groups()[1]), float(m.groups()[2]), i))
+                g = m.groups()
+                list.append((float(g[0]), 0, float(g[1]), float(g[2]), i))
         output.close()
 
         report = open(os.path.join(self.outdir, 'gfxinfo.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
-        writer.writerow(['Draw', 'Process', 'Execute', 'No.'])
+        writer.writerow(['Draw', 'Prepare', 'Process', 'Execute', 'No.'])
         if len(list) > 0:
             for item in list:
                 writer.writerow(item)
@@ -111,7 +117,7 @@ class DumpsysGfxinfoThread(threading.Thread):
             writer = csv.writer(report, quoting=csv.QUOTE_ALL)
             writer.writerow(['项目', '绘制卡顿率'])
         if len(list) > 0:
-            percent = round(len([x for x in list if sum(x[0:3]) > 16.0]) * 100.0 / len(list), 2)
+            percent = round(len([x for x in list if sum(x[0:4]) > 16.0]) * 100.0 / len(list), 2)
         else:
             percent = 0
         writer.writerow([os.path.basename(self.outdir), '{0}%'.format(percent)])
@@ -178,10 +184,9 @@ class LogcatSkpinfoThread(threading.Thread):
 
 class MonkeyMonitorThread(threading.Thread):
 
-    def __init__(self, adb, packages, interval):
+    def __init__(self, adb, interval):
         threading.Thread.__init__(self)
         self.adb = adb
-        self.packages = packages
         self.interval = interval
         self.loop = True
 
@@ -190,8 +195,7 @@ class MonkeyMonitorThread(threading.Thread):
             self.adb.waitforboot()
             line = self.adb.shellreadline('uiautomator dump')
             if line == 'ERROR: null root node returned by UiTestAutomationBridge.':
-                for package in self.packages:
-                    self.adb.shell('am force-stop {0}'.format(package))
+                self.adb.kill('com.android.commands.monkey')
             time.sleep(self.interval)
 
     def stop(self):
@@ -266,13 +270,11 @@ class Executor(object):
             outdir = pardir
 
         self.adb.push(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'monkey.sh'), '/data/local/tmp')
+        t = MonkeyMonitorThread(self.adb, 600)
+        t.start()
         if package:
-            t = MonkeyMonitorThread(self.adb, [package], 600)
-            t.start()
             self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2} {3}'.format(self.seed, self.throttle, self.count, package))
         else:
-            t = MonkeyMonitorThread(self.adb, self.packages, 600)
-            t.start()
             self.adb.shell('sh /data/local/tmp/monkey.sh {0} {1} {2}'.format(self.seed, self.throttle, self.count))
 
         while True:
@@ -282,6 +284,7 @@ class Executor(object):
             time.sleep(30)
         t.stop()
 
+        self.adb.waitforboot()
         self.adb.pull('/data/local/tmp/monkey.txt', outdir)
         output = open(os.path.join(outdir, 'monkey.txt'), 'r')
         data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
@@ -372,6 +375,9 @@ class Executor(object):
         report.close()
 
     def execute(self):
+        self.adb.reboot(30)
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+
         # temp code
         self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getPackageList')
         time.sleep(3)
@@ -381,7 +387,7 @@ class Executor(object):
         self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
 
         pardir = os.path.join(self.workout, 'monkey')
-        shutil.rmtree(pardir, ignore_errors=True)
+        #shutil.rmtree(pardir, ignore_errors=True)
         if not os.path.exists(pardir):
             os.mkdir(pardir)
 

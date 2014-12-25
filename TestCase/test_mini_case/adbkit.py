@@ -70,9 +70,9 @@ class Adb(object):
         while self.getprop('sys.boot_completed') != '1':
             time.sleep(interval)
 
-    def reboot(self):
+    def reboot(self, interval=0.1):
         self.adb('reboot')
-        self.waitforboot(0.1)
+        self.waitforboot(interval)
 
     def screenshot(self, local):
         screenshot = '/data/local/tmp/screenshot.png'
@@ -84,6 +84,10 @@ class Adb(object):
 
     def startservice(self, intent):
         return self.shellreadlines('am startservice --user 0 -W {0}'.format(intent))
+
+    def kill(self, proc):
+        for pid in [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == proc]:
+            self.shell('kill {0}'.format(pid))
 
 class Uia(object):
 

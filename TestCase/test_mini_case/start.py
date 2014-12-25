@@ -124,8 +124,6 @@ def main():
 
     start = time.time()
     for i in module:
-        adb.reboot()
-        adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
         executor[i].execute()
     end = time.time()
 

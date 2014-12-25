@@ -19,7 +19,16 @@ class Executor(object):
         self.workout = workout
 
     def setup(self):
-        pass
+        print('Imported user data type choices are:')
+        print('    1. 	general condition')
+        print('    2.  stress condition')
+        try:
+            self.general = input('\nWhich would you like? [1] ') == 1
+        except SyntaxError:
+            self.general = True
+        except NameError:
+            sys.exit(2)
+        print('')
 
     def scene(self, name, package, clsname):
         outdir = os.path.join(self.workout, name)
@@ -35,25 +44,59 @@ class Executor(object):
         t1.join()
         t2.join()
 
+    def getpartstat(self, name):
+        m = re.search('[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+\d+', self.adb.shellreadlines('df {0}'.format(name))[-1])
+        if m:
+            z = lambda x, y: x * pow(1024, 'BKMGT'.find(y))
+            g = m.groups()
+            return z(float(g[0]), g[1]), z(float(g[2]), g[3]), z(float(g[4]), g[5])
+        else:
+            return 0, 0, 0
+
+    def importdata(self, p1, p2, p3, p4):
+        pimdir = '/sdcard/nubia/PIM'
+        mediadir = '/sdcard/Media'
+
+        self.adb.shell('rm -rf {0}'.format(pimdir))
+        self.adb.shell('rm -rf {0}'.format(mediadir))
+
+        self.adb.shell('mkdir -p {0}'.format(pimdir))
+        if self.general:
+            self.adb.push(unicode(p1.strip(), 'utf-8').encode('gb2312'), pimdir)
+        else:
+            self.adb.push(unicode(p2.strip(), 'utf-8').encode('gb2312'), pimdir)
+
+        # restore the backup
+        self.adb.shell('am force-stop cn.nubia.databackup')
+        self.adb.shellreadlines('uiautomator runtest automator.jar -c cn.nubia.databackup.RestoreTestCase#testRestore')
+
+        self.adb.shell('rm -rf {0}'.format(pimdir))
+        self.adb.shell('rm -rf {0}'.format(mediadir))
+
+        self.adb.shell('mkdir -p {0}'.format(mediadir))
+        if self.general:
+            self.adb.push(unicode(p3.strip(), 'utf-8').encode('gb2312'), mediadir)
+        else:
+            self.adb.push(unicode(p4.strip(), 'utf-8').encode('gb2312'), mediadir)
+
+        self.adb.reboot(30)
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+
     def execute(self):
-        workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-
-        # install ApiDemos
-        self.adb.install(os.path.join(workdir, 'ApiDemos.apk'))
-
-        # eanble dumpsys gfxinfo
-        self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
-
-        # get scene info
-        self.adb.push(os.path.join(workdir, 'scenes.jar'), '/data/local/tmp')
-
         self.workout = os.path.join(self.workout, 'scenes')
         shutil.rmtree(self.workout, ignore_errors=True)
         if not os.path.exists(self.workout):
             os.mkdir(self.workout)
 
+        workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        workdir = os.path.join(workdir, 'scenes')
+
+        self.adb.install(os.path.join(workdir, 'ApiDemos.apk'))
+        self.adb.push(os.path.join(workdir, 'scenes.jar'), '/data/local/tmp')
+
         model = self.adb.getprop('ro.product.model')
         if model == 'L50w':
+            self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.sony.test.NativeListViewTest')
             self.scene('ContactTest', 'com.sonyericsson.android.socialphonebook', 'cn.sony.test.ContactTest')
             self.scene('DeveloperTest', 'com.android.settings', 'cn.sony.test.DeveloperTest')
@@ -61,6 +104,7 @@ class Executor(object):
             self.scene('BrowserTest', 'com.android.browser', 'cn.sony.test.BrowserTest')
             self.scene('LauncherTest', 'com.sonyericsson.home', 'cn.sony.test.LauncherTest')
         elif model == 'SM-G9008V':
+            self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.sung.test.NativeListViewTest')
             self.scene('ContactTest', 'com.android.contacts', 'cn.sung.test.ContactTest')
             self.scene('DeveloperTest', '', 'cn.sung.test.DeveloperTest')
@@ -69,27 +113,13 @@ class Executor(object):
             self.scene('NoteScaleTest', 'com.android.mms', 'cn.sung.test.NoteScaleTest')
             self.scene('LauncherTest', '', 'cn.sung.test.LauncherTest')
         else:
-            # copy picture files
-            self.adb.shellreadline('mkdir -p /sdcard/Pictures')
-            picturesdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[5].strip()
-            self.adb.push(unicode(picturesdir, 'utf-8').encode('GB2312'), '/sdcard/Pictures')
+            configs = open(os.path.join(workdir, 'config.txt'), 'r').readlines()
+            if self.getpartstat('data')[0] > 2.5 * pow(1024, 3):
+                self.importdata(configs[1], configs[5], configs[3], configs[7])
+            else:
+                self.importdata(configs[9], configs[13], configs[11], configs[15])
 
-            # copy pim files
-            self.adb.shellreadline('rm -rf /sdcard/nubia/PIM/*')
-            self.adb.shellreadline('mkdir -p /sdcard/nubia/PIM')
-            pimdir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[3].strip()
-            for filename in glob.glob(os.path.join(unicode(pimdir, 'utf-8'), '*')):
-                realname = filename.encode('GB2312')
-                if os.path.isdir(filename):
-                    self.adb.shellreadline('mkdir /sdcard/nubia/PIM/{0}'.format(os.path.basename(filename)))
-                    self.adb.push(realname, '/sdcard/nubia/PIM/{0}'.format(os.path.basename(filename)))
-                elif os.path.isfile(filename):
-                    self.adb.push(realname, '/sdcard/nubia/PIM')
-
-            # restore the backup
-            self.adb.shellreadline('am force-stop cn.nubia.databackup')
-            self.adb.shellreadlines('uiautomator runtest automator.jar -c cn.nubia.databackup.RestoreTestCase#testRestore')
-
+            self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.nubia.test.NativeListViewTest')
             self.scene('ContactTest', 'com.android.contacts', 'cn.nubia.test.ContactTest')
             self.scene('DeveloperTest', 'com.android.settings', 'cn.nubia.test.DeveloperTest')

@@ -20,7 +20,7 @@ import com.ztemt.test.stress.R;
 public class FileSystemTest extends BaseTest {
 
     private static final String LOG_TAG = "FileSystemTest";
-    private static final String[] FILE_PARTITIONS = { "/cache", "/data" };
+    private static final String[] FILE_PARTITIONS = { "/data" };
     private static final int[] RAW_RES_IDS = { R.raw.test };
 
     public FileSystemTest(Context context) {

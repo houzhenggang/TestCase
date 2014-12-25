@@ -25,6 +25,7 @@ class Executor(object):
 
         if updates:
             self.adb.push(max(updates, key=os.path.basename), '/sdcard/update.zip')
+            self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
             self.adb.shellreadlines('uiautomator runtest automator.jar -c cn.nubia.systemupdate.SystemUpdateTestCase#testLocalUpdate')
             time.sleep(30)
             self.adb.waitforboot()

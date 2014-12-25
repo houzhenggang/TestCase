@@ -16,6 +16,8 @@ class Executor(object):
         pass
 
     def execute(self):
+        self.adb.reboot()
+
         report = open(os.path.join(self.workout, 'uptime.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
@@ -26,3 +28,5 @@ class Executor(object):
             uptime = int(g[0]) * 3600 + int(g[1]) * 60 + int(g[2])
             writer.writerow(['{0:0.3f}s'.format(uptime + 2)])
         report.close()
+
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')

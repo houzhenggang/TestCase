@@ -61,6 +61,8 @@ class Executor(object):
         return (y(install), y(launch), y(uninstall), z(except1), z(except2), z(except3))
 
     def execute(self):
+        self.adb.reboot(30)
+        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
         remotedir = open(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'config.txt'), 'r').readlines()[1].strip()
 
         report = open(os.path.join(self.workout, 'compat.csv'), 'wb')
