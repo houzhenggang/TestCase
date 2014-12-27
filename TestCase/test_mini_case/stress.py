@@ -73,11 +73,16 @@ class Executor(object):
             tags = self.adb.getprop('ro.build.tags')
             self.adb.uninstall('com.ztemt.test.stress')
             self.adb.install(os.path.join(self.workdir, 'StressTest_{0}.apk'.format(tags)))
+            self.adb.pull('/sdcard/Android/data/com.ztemt.test.kit/files/stress.csv', stress)
+            if os.path.exists(stress):
+                mtime = os.stat(stress).st_mtime
+            else:
+                mtime = 0
             self.adb.shellreadlines('am start --user 0 -n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)))
             while True:
                 self.adb.waitforboot()
-                self.adb.pull('/sdcard/Android/data/com.ztemt.test.stress/files/stress.csv', stress)
-                if os.path.exists(stress):
+                self.adb.pull('/sdcard/Android/data/com.ztemt.test.kit/files/stress.csv', stress)
+                if os.path.exists(stress) and os.stat(stress).st_mtime > mtime:
                     break
                 time.sleep(30)
             self.adb.uninstall('com.ztemt.test.stress')

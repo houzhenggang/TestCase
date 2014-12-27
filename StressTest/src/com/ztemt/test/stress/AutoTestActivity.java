@@ -3,14 +3,18 @@ package com.ztemt.test.stress;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,6 +22,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ListView;
 
+import com.ztemt.test.kit.TestKit;
+import com.ztemt.test.kit.TestKitService;
 import com.ztemt.test.stress.item.BaseTest;
 import com.ztemt.test.stress.util.PreferenceUtils;
 
@@ -31,6 +37,8 @@ public class AutoTestActivity extends ListActivity implements DialogInterface.On
     private Handler mHandler = new Handler();
     private View mPrefView;
 
+    private TestKit mTestKit;
+    private boolean mBound = false;
     private static BaseTest sTest;
 
     private Runnable mStartRunnable = new Runnable() {
@@ -47,8 +55,29 @@ public class AutoTestActivity extends ListActivity implements DialogInterface.On
         @Override
         public void run() {
             Log.d(LOG_TAG, "Notify platform to stop");
-            mAdapter.saveReport();
+            if (mBound) {
+                try {
+                    mTestKit.notifyStop(mAdapter.report(), "stress.csv");
+                } catch (RemoteException e) {
+                    Log.e(LOG_TAG, "notifyStop", e);
+                }
+            }
             getListView().setFocusable(true);
+        }
+    };
+
+    private ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            mTestKit = TestKit.Stub.asInterface(service);
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mTestKit = null;
+            mBound = false;
         }
     };
 
@@ -77,6 +106,9 @@ public class AutoTestActivity extends ListActivity implements DialogInterface.On
         mAdapter = new AutoTestAdapter(this);
         setListAdapter(mAdapter);
         getListView().setSelected(true);
+
+        bindService(new Intent(TestKitService.ACTION_BINDER),
+                mServiceConnection, BIND_AUTO_CREATE);
 
         handleIntent(getIntent().getExtras());
     }
@@ -122,6 +154,7 @@ public class AutoTestActivity extends ListActivity implements DialogInterface.On
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        unbindService(mServiceConnection);
         mPrefUtils.setOnPreferenceChangeListener(null);
     }
 

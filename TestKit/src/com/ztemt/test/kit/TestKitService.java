@@ -2,6 +2,7 @@ package com.ztemt.test.kit;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
@@ -21,11 +22,23 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
 import android.os.IBinder;
+import android.os.RemoteException;
 import android.text.TextUtils;
 
 public class TestKitService extends Service {
 
     private static final String EXTRA_COMMAND = "command";
+
+    public static final String ACTION_BINDER = "com.ztemt.test.action.TEST_KIT";
+
+    private TestKit.Stub mBinder = new TestKit.Stub() {
+
+        @Override
+        public void notifyStop(byte[] bytes, String filename)
+                throws RemoteException {
+            write(bytes, new File(getExternalFilesDir(""), filename));
+        }
+    };
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -53,12 +66,14 @@ public class TestKitService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
+
+        getFilesDir().setReadable(true, false);
 
         IntentFilter filter = new IntentFilter(Intent.ACTION_PACKAGE_ADDED);
         filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
@@ -126,15 +141,12 @@ public class TestKitService extends Service {
         // Save package list to external storage
         File file = getFileStreamPath("packages");
         write(jobj.toString(), file);
-
-        getFilesDir().setReadable(true, false);
-        file.setReadable(true, false);
     }
 
-    private static void write(String line, File t) {
+    private static void write(String line, File file) {
         BufferedWriter bw = null;
         try {
-            FileWriter fw = new FileWriter(t, false);
+            FileWriter fw = new FileWriter(file, false);
             bw = new BufferedWriter(fw);
             bw.write(line);
         } catch (IOException e) {
@@ -148,6 +160,26 @@ public class TestKitService extends Service {
                 }
             }
         }
+        file.setReadable(true, false);
+    }
+
+    private static void write(byte[] bytes, File file) {
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            fos.write(bytes);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        file.setReadable(true, false);
     }
 
     @SuppressWarnings("deprecation")

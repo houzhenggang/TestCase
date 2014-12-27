@@ -1,9 +1,5 @@
 package com.ztemt.test.stress;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -172,34 +168,15 @@ public class AutoTestAdapter extends BaseAdapter {
     public byte[] report() {
         StringBuffer sb = new StringBuffer(mContext.getString(R.string.report_titles));
         for (int i = 0; i < mTests.length; i++) {
-            sb.append((i + 1) + "\t");
-            sb.append(mTests[i].getTotalTimes() + "\t");
-            sb.append(mTests[i].getTestTimes() + "\t");
-            sb.append(mTests[i].getSuccessTimes() + "\t");
-            sb.append(mTests[i].getFailureTimes() + "\t");
-            sb.append(mTests[i].getTitle() + "\n");
+            if (mTests[i].getTotalTimes() > 0) {
+                sb.append("\"" + mTests[i].getTitle() + "\",");
+                sb.append("\"" + mTests[i].getTotalTimes() + "\",");
+                sb.append("\"" + mTests[i].getTestTimes() + "\",");
+                sb.append("\"" + mTests[i].getSuccessTimes() + "\",");
+                sb.append("\"" + mTests[i].getFailureTimes() + "\"\n");
+            }
         }
         return sb.toString().getBytes();
-    }
-
-    public void saveReport() {
-        File file = new File(mContext.getExternalFilesDir(""), "stress.csv");
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-            bw.write(mContext.getString(R.string.report_titles));
-            for (int i = 0; i < mTests.length; i++) {
-                if (mTests[i].getTotalTimes() > 0) {
-                    bw.write("\"" + mTests[i].getTitle() + "\",\""
-                            + mTests[i].getTotalTimes() + "\",\""
-                            + mTests[i].getTestTimes() + "\",\""
-                            + mTests[i].getSuccessTimes() + "\",\""
-                            + mTests[i].getFailureTimes() + "\"\n");
-                }
-            }
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private class ViewHolder {

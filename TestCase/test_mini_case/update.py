@@ -15,7 +15,8 @@ class Executor(object):
 
     def execute(self):
         model = self.adb.getprop('ro.product.model')
-        builddir = open(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'config.txt'), 'r').readlines()[7].strip()
+        workdir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'update')
+        builddir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
         updates = []
 
         for dirpath, dirnames, names in os.walk(builddir):

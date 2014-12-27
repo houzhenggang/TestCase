@@ -47,7 +47,7 @@ class Adb(object):
         self.adbreadline('push \"{0}\" {1}'.format(local, remote))
 
     def pull(self, remote, local):
-        self.adbreadline('pull {0} \"{1}\"'.format(remote, local))
+        self.adbreadline('pull -a {0} \"{1}\"'.format(remote, local))
 
     def install(self, local, reinstall=True, downgrade=False, sdcard=False):
         tmpapk = '/data/local/tmp/tmp.apk'
