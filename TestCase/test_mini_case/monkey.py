@@ -247,18 +247,19 @@ class Executor(object):
         if self.single:
             selected = []
             print('Monkey package choices are:')
-            for i in range(len(self.packages)):
-                print('    {0:>2}. {1}'.format(i + 1, self.packages[i]))
-            options = ','.join([str(x) for x in range(1, len(self.packages) + 1)])
+            pkgkeys = self.packages.keys()
+            for i in range(len(pkgkeys)):
+                print('    {0:>2}. {1}'.format(i + 1, pkgkeys[i]))
+            options = ','.join([str(x) for x in range(1, len(pkgkeys) + 1)])
             selects = raw_input('\nWhich would you like? [{0}] '.format(options)).split(',')
             for select in selects:
                 try:
                     index = int(select.strip()) - 1
-                    index = divmod(index, len(self.packages))[1]
-                    selected.append(self.packages[index])
+                    index = divmod(index, len(pkgkeys))[1]
+                    selected.append((pkgkeys[index], self.packages[pkgkeys[index]]))
                 except ValueError:
                     continue
-            self.packages = selected if selected else self.packages
+            self.packages = dict(selected) if selected else self.packages
             print('')
 
     def monkey(self, pardir, package=None):
@@ -361,14 +362,14 @@ class Executor(object):
                 anr_reason = ''
             crash_package_no_pid = crash_package.split(' (')[0]
             crash_package_real = crash_package_no_pid.split(':')[-1].strip()
-            if crash_package_real in self.pkgs:
-                crash_package_version = self.pkgs[crash_package_real]['versionName']
+            if crash_package_real in self.packages:
+                crash_package_version = self.packages[crash_package_real]['versionName']
             else:
                 crash_package_version = ''
             anr_package_no_pid = anr_package.split(' (')[0]
             anr_package_real = anr_package_no_pid.split(':')[-1].strip()
-            if anr_package_real in self.pkgs:
-                anr_package_version = self.pkgs[anr_package_real]['versionName']
+            if anr_package_real in self.packages:
+                anr_package_version = self.packages[anr_package_real]['versionName']
             else:
                 anr_package_version = ''
             writer.writerow([crash_package, crash_package_version, crash_type, crash_reason, anr_package, anr_package_version, anr_reason, crash_package_no_pid, anr_package_no_pid])
@@ -378,21 +379,16 @@ class Executor(object):
         self.adb.reboot(30)
         self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
 
-        # temp code
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getPackageList')
-        time.sleep(3)
-        self.pkgs = eval(self.adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/packages'))
-
         # eanble dumpsys gfxinfo
         self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
 
         pardir = os.path.join(self.workout, 'monkey')
-        #shutil.rmtree(pardir, ignore_errors=True)
+        shutil.rmtree(pardir, ignore_errors=True)
         if not os.path.exists(pardir):
             os.mkdir(pardir)
 
         if self.single:
-            for package in self.packages:
+            for package in self.packages.keys():
                 outdir = os.path.join(pardir, package)
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)
@@ -411,7 +407,7 @@ class Executor(object):
                 t3.join()
         else:
             threads = []
-            for package in self.packages:
+            for package in self.packages.keys():
                 outdir = os.path.join(pardir, package)
                 if not os.path.exists(outdir):
                     os.mkdir(outdir)

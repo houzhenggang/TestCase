@@ -69,7 +69,7 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
         self.packages = packages
-        self.packages.append('com.android.systemui')
+        self.packages['com.android.systemui'] = None
 
     def setup(self):
         pass
@@ -167,7 +167,7 @@ class Executor(object):
         time.sleep(5)
         self.meminfo('开机启动进程及内存占用')
 
-        for package in self.packages:
+        for package in self.packages.keys():
             outdir = os.path.join(self.workout, package)
             if not os.path.exists(outdir):
                 os.mkdir(outdir)

@@ -72,9 +72,7 @@ public class TestKitService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String command = intent.getStringExtra(EXTRA_COMMAND);
-            if ("getLauncherList".equals(command)) {
-                getLauncherList();
-            } else if ("getPackageList".equals(command)) {
+            if ("getPackageList".equals(command)) {
                 getPackageList();
             } else if ("disableKeyguard".equals(command)) {
                 enableKeyguard(false);
@@ -92,37 +90,6 @@ public class TestKitService extends Service {
         unregisterReceiver(mReceiver);
     }
 
-    private void getLauncherList() {
-        Intent query = new Intent(Intent.ACTION_MAIN).addCategory(
-                Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> activities = getPackageManager()
-                .queryIntentActivities(query, 0);
-        JSONObject jobj = new JSONObject();
-
-        for (ResolveInfo info : activities) {
-            String packageName = info.activityInfo.packageName;
-            JSONObject obj = new JSONObject();
-            try {
-                obj.put("title", info.loadLabel(getPackageManager()).toString());
-                obj.put("activity", info.activityInfo.name);
-                if (jobj.has(packageName)) {
-                    jobj.getJSONArray(packageName).put(obj);
-                } else {
-                    jobj.put(packageName, new JSONArray().put(obj));
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // Save json object to external storage
-        File file = getFileStreamPath("launcher");
-        write(jobj.toString(), file);
-
-        getFilesDir().setReadable(true, false);
-        file.setReadable(true, false);
-    }
-
     private void getPackageList() {
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(
                 Intent.CATEGORY_LAUNCHER);
@@ -135,8 +102,8 @@ public class TestKitService extends Service {
             JSONObject activity = new JSONObject();
 
             try {
-                activity.put(info.loadLabel(getPackageManager()).toString(),
-                        info.activityInfo.name);
+                activity.put("title", info.loadLabel(getPackageManager()).toString());
+                activity.put("name", info.activityInfo.name);
                 if (jobj.has(packageName)) {
                     jobj.optJSONObject(packageName).getJSONArray("activities")
                             .put(activity);

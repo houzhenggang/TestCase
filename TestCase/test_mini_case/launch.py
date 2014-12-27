@@ -9,11 +9,10 @@ import threading
 
 class Executor(object):
 
-    def __init__(self, adb, workout, packages, launchers):
+    def __init__(self, adb, workout, packages):
         self.adb = adb
         self.workout = workout
         self.packages = packages
-        self.launchers = launchers
 
     def setup(self):
         pass
@@ -65,9 +64,9 @@ class Executor(object):
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
         writer.writerow(['名称', '包大小', '第一次', '第二次', '第三次', '第四次', '第五次', '第六次', '最小值', '最大值', '平均值'])
 
-        for package in self.packages:
-            for item in self.launchers[package]:
-                r = self.appinfo(package, item['title'], item['activity'])
+        for key, value in self.packages.items():
+            for activity in value['activities']:
+                r = self.appinfo(key, activity['title'], activity['name'])
                 writer.writerow([r[0], r[1], r[2][0], r[2][1], r[2][2], r[2][3], r[2][4], r[2][5], r[3], r[4], r[5]])
                 report.flush()
         report.close()

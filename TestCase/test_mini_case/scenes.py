@@ -22,10 +22,11 @@ class Executor(object):
         print('Imported user data type choices are:')
         print('    1. 	general condition')
         print('    2.  stress condition')
+        print('    3.  none')
         try:
-            self.general = input('\nWhich would you like? [1] ') == 1
+            self.option = input('\nWhich would you like? [1] ')
         except SyntaxError:
-            self.general = True
+            self.option = 1
         except NameError:
             sys.exit(2)
         print('')
@@ -61,9 +62,9 @@ class Executor(object):
         self.adb.shell('rm -rf {0}'.format(mediadir))
 
         self.adb.shell('mkdir -p {0}'.format(pimdir))
-        if self.general:
+        if self.option == 1:
             self.adb.push(unicode(p1.strip(), 'utf-8').encode('gb2312'), pimdir)
-        else:
+        elif self.option == 2:
             self.adb.push(unicode(p2.strip(), 'utf-8').encode('gb2312'), pimdir)
 
         # restore the backup
@@ -74,9 +75,9 @@ class Executor(object):
         self.adb.shell('rm -rf {0}'.format(mediadir))
 
         self.adb.shell('mkdir -p {0}'.format(mediadir))
-        if self.general:
+        if self.option == 1:
             self.adb.push(unicode(p3.strip(), 'utf-8').encode('gb2312'), mediadir)
-        else:
+        elif self.option == 2:
             self.adb.push(unicode(p4.strip(), 'utf-8').encode('gb2312'), mediadir)
 
         self.adb.reboot(30)
@@ -113,11 +114,12 @@ class Executor(object):
             self.scene('NoteScaleTest', 'com.android.mms', 'cn.sung.test.NoteScaleTest')
             self.scene('LauncherTest', '', 'cn.sung.test.LauncherTest')
         else:
-            configs = open(os.path.join(workdir, 'config.txt'), 'r').readlines()
-            if self.getpartstat('data')[0] > 2.5 * pow(1024, 3):
-                self.importdata(configs[1], configs[5], configs[3], configs[7])
-            else:
-                self.importdata(configs[9], configs[13], configs[11], configs[15])
+            if self.option != 3:
+                configs = open(os.path.join(workdir, 'config.txt'), 'r').readlines()
+                if self.getpartstat('data')[0] > 2.5 * pow(1024, 3):
+                    self.importdata(configs[1], configs[5], configs[3], configs[7])
+                else:
+                    self.importdata(configs[9], configs[13], configs[11], configs[15])
 
             self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.nubia.test.NativeListViewTest')

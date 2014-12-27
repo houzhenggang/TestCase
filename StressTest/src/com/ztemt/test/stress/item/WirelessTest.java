@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
+import android.os.Build;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.ztemt.test.stress.R;
@@ -17,6 +19,7 @@ public class WirelessTest extends BaseTest {
 
     private static final String LOG_TAG = "WirelessTest";
 
+    private TelephonyManager mTM;
     private ConnectivityManager mCM;
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -42,6 +45,7 @@ public class WirelessTest extends BaseTest {
 
     public WirelessTest(Context context) {
         super(context);
+        mTM = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mCM = (ConnectivityManager) context.getSystemService(
                 Context.CONNECTIVITY_SERVICE);
     }
@@ -136,22 +140,42 @@ public class WirelessTest extends BaseTest {
     }
 
     private boolean getMobileDataEnabled() {
-        try {
-            Method m = ConnectivityManager.class.getMethod("getMobileDataEnabled");
-            return (Boolean) m.invoke(mCM);
-        } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage(), e);
-            return false;
+        if (Build.VERSION.SDK_INT < 21) {
+            try {
+                Method m = ConnectivityManager.class.getMethod("getMobileDataEnabled");
+                return (Boolean) m.invoke(mCM);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                return false;
+            }
+        } else {
+            try {
+                Method m = TelephonyManager.class.getMethod("getDataEnabled");
+                return (Boolean) m.invoke(mTM);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                return false;
+            }
         }
     }
 
     private void setMobileDataEnabled(boolean enabled) {
-        try {
-            Method m = ConnectivityManager.class.getMethod(
-                    "setMobileDataEnabled", Boolean.TYPE);
-            m.invoke(mCM, enabled);
-        } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage(), e);
+        if (Build.VERSION.SDK_INT < 21) {
+            try {
+                Method m = ConnectivityManager.class.getMethod(
+                        "setMobileDataEnabled", Boolean.TYPE);
+                m.invoke(mCM, enabled);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+            }
+        } else {
+            try {
+                Method m = TelephonyManager.class.getMethod(
+                        "setDataEnabled", Boolean.TYPE);
+                m.invoke(mTM, enabled);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+            }
         }
     }
 }

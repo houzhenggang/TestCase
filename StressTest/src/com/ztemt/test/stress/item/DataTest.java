@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -70,22 +71,42 @@ public class DataTest extends BaseTest {
     }
 
     private boolean getMobileDataEnabled() {
-        try {
-            Method m = ConnectivityManager.class.getMethod("getMobileDataEnabled");
-            return (Boolean) m.invoke(mCM);
-        } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage(), e);
-            return false;
+        if (Build.VERSION.SDK_INT < 21) {
+            try {
+                Method m = ConnectivityManager.class.getMethod("getMobileDataEnabled");
+                return (Boolean) m.invoke(mCM);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                return false;
+            }
+        } else {
+            try {
+                Method m = TelephonyManager.class.getMethod("getDataEnabled");
+                return (Boolean) m.invoke(mTM);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                return false;
+            }
         }
     }
 
     private void setMobileDataEnabled(boolean enabled) {
-        try {
-            Method m = ConnectivityManager.class.getMethod(
-                    "setMobileDataEnabled", Boolean.TYPE);
-            m.invoke(mCM, enabled);
-        } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage(), e);
+        if (Build.VERSION.SDK_INT < 21) {
+            try {
+                Method m = ConnectivityManager.class.getMethod(
+                        "setMobileDataEnabled", Boolean.TYPE);
+                m.invoke(mCM, enabled);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+            }
+        } else {
+            try {
+                Method m = TelephonyManager.class.getMethod(
+                        "setDataEnabled", Boolean.TYPE);
+                m.invoke(mTM, enabled);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+            }
         }
     }
 }

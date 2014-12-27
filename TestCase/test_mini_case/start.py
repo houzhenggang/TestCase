@@ -84,11 +84,11 @@ def main():
         print('')
 
     adb.install(os.path.join(workdir, 'TestKit.apk'))
-    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getLauncherList')
+    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getPackageList')
     time.sleep(3)
-    launchers = eval(adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/launcher'))
-    packages = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
-    packages = [package for package in packages if package in launchers]
+    packages = eval(adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/packages'))
+    testpkgs = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
+    packages = dict([x for x in packages.items() if x[0] in testpkgs])
 
     executor = {}
     for i in module:
@@ -96,7 +96,7 @@ def main():
             executor[i] = update.Executor(adb, workout)
             executor[i].setup()
         elif i == 2:
-            executor[i] = launch.Executor(adb, workout, packages, launchers)
+            executor[i] = launch.Executor(adb, workout, packages)
             executor[i].setup()
         elif i == 3:
             executor[i] = scenes.Executor(adb, workout)
