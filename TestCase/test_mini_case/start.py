@@ -83,10 +83,7 @@ def main():
         module = selected if selected else module
         print('')
 
-    adb.install(os.path.join(workdir, 'TestKit.apk'))
-    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command getPackageList')
-    time.sleep(3)
-    packages = eval(adb.shellreadline('cat /data/data/com.ztemt.test.kit/files/packages'))
+    packages = adb.kit.packages()
     testpkgs = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
     packages = dict([x for x in packages.items() if x[0] in testpkgs])
 
@@ -117,10 +114,9 @@ def main():
             executor[i] = memory.Executor(adb, workout, packages)
             executor[i].setup()
 
-    adb.push(os.path.join(workdir, 'automator.jar'), '/data/local/tmp')
-    adb.shellreadlines('uiautomator runtest automator.jar -c com.android.systemui.SleepWakeupTestCase#testWakeup')
-    adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
-    adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testKeepScreenOn')
+    adb.uia.runtest('com.android.systemui.SleepWakeupTestCase', 'testWakeup')
+    adb.kit.disablekeyguard()
+    adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
 
     start = time.time()
     for i in module:

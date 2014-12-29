@@ -44,7 +44,7 @@ class Executor(object):
         lines = self.adb.install(None, downgrade=True, sdcard=sdcard)
         install = 'Success' in [line.strip() for line in lines]
         if install:
-            self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+            self.adb.kit.disablekeyguard()
             lines = self.adb.shellreadlines('monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package))
             for line in lines:
                 if line.startswith('// CRASH: {0}'.format(package)):
@@ -77,7 +77,7 @@ class Executor(object):
 
     def execute(self):
         self.adb.reboot(30)
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()
         remotedir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
 
         report = open(os.path.join(self.workout, 'compat.csv'), 'wb')

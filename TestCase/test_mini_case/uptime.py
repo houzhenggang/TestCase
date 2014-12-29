@@ -29,4 +29,4 @@ class Executor(object):
             writer.writerow(['{0:0.3f}s'.format(uptime + 2)])
         report.close()
 
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()

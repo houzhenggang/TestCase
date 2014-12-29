@@ -18,14 +18,8 @@ class Executor(object):
         pass
 
     def startactivity(self, package, activity, cleartask=True):
-        cmd = 'am start --user 0 -W {0} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {1}/{2}'.format(
-                '--activity-clear-task' if cleartask else '', package, activity)
-        p = self.adb.shellopen(cmd)
-        y = lambda x: x.terminate()
-        t = threading.Timer(5, y, args=(p,))
-        t.start()
-        lines = p.stdout.readlines()
-        t.cancel()
+        lines = self.adb.startactivity('{0} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {1}/{2}'.format(
+                '--activity-clear-task' if cleartask else '', package, activity))
         for line in lines:
             if line.startswith('ThisTime:'):
                 return int(line[10:])
@@ -57,7 +51,7 @@ class Executor(object):
 
     def execute(self):
         self.adb.reboot(30)
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()
 
         report = open(os.path.join(self.workout, 'launch.csv'), 'wb')
         report.write(codecs.BOM_UTF8)

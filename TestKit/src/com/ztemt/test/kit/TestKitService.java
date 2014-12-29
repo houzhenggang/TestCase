@@ -13,22 +13,17 @@ import org.json.JSONObject;
 
 import android.app.KeyguardManager;
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.text.TextUtils;
 
 public class TestKitService extends Service {
 
-    private static final String EXTRA_COMMAND = "command";
-
+    public static final String EXTRA_COMMAND = "command";
     public static final String ACTION_BINDER = "com.ztemt.test.action.TEST_KIT";
 
     private TestKit.Stub mBinder = new TestKit.Stub() {
@@ -36,28 +31,7 @@ public class TestKitService extends Service {
         @Override
         public void notifyStop(byte[] bytes, String filename)
                 throws RemoteException {
-            write(bytes, new File(getExternalFilesDir(""), filename));
-        }
-    };
-
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            String packageName = "";
-
-            if (action.equals(Intent.ACTION_PACKAGE_ADDED)) {
-                packageName = intent.getData().getSchemeSpecificPart();
-            }
-
-            if (!TextUtils.isEmpty(packageName)) {
-                File file = getFileStreamPath("package");
-                write(packageName, file);
-
-                getFilesDir().setReadable(true, false);
-                file.setReadable(true, false);
-            }
+            write(bytes, getFileStreamPath(filename));
         }
     };
 
@@ -74,13 +48,6 @@ public class TestKitService extends Service {
         super.onCreate();
 
         getFilesDir().setReadable(true, false);
-
-        IntentFilter filter = new IntentFilter(Intent.ACTION_PACKAGE_ADDED);
-        filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
-        filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
-        filter.addDataScheme("package");
-
-        registerReceiver(mReceiver, filter);
     }
 
     @Override
@@ -96,13 +63,6 @@ public class TestKitService extends Service {
             }
         }
         return START_NOT_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        unregisterReceiver(mReceiver);
     }
 
     private void getPackageList() {
@@ -148,6 +108,7 @@ public class TestKitService extends Service {
         try {
             FileWriter fw = new FileWriter(file, false);
             bw = new BufferedWriter(fw);
+            bw.write(System.currentTimeMillis() + "\n");
             bw.write(line);
         } catch (IOException e) {
             e.printStackTrace();
@@ -167,6 +128,7 @@ public class TestKitService extends Service {
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(file);
+            fos.write((System.currentTimeMillis() + "\n").getBytes());
             fos.write(bytes);
         } catch (IOException e) {
             e.printStackTrace();

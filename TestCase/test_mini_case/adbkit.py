@@ -3,6 +3,8 @@
 import os
 import re
 import subprocess
+import sys
+import threading
 import time
 
 def devices():
@@ -18,6 +20,9 @@ class Adb(object):
 
     def __init__(self, serialno):
         self.prefix = 'adb -s {0}'.format(serialno) if serialno else 'adb'
+        workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        self.uia = Uia(self, os.path.join(workdir, 'automator.jar'))
+        self.kit = Kit(self, os.path.join(workdir, 'TestKit.apk'))
 
     def adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
         return subprocess.Popen('{0} {1}'.format(self.prefix, cmd), shell=shell, stdout=stdout, stderr=stderr)
@@ -47,7 +52,7 @@ class Adb(object):
         self.adbreadline('push \"{0}\" {1}'.format(local, remote))
 
     def pull(self, remote, local):
-        self.adbreadline('pull -a {0} \"{1}\"'.format(remote, local))
+        self.adbreadline('pull {0} \"{1}\"'.format(remote, local))
 
     def install(self, local, reinstall=True, downgrade=False, sdcard=False):
         tmpapk = '/data/local/tmp/tmp.apk'
@@ -79,11 +84,38 @@ class Adb(object):
         self.shell('screencap -p {0}'.format(screenshot))
         self.pull(screenshot, local)
 
-    def startactivity(self, intent):
-        return self.shellreadlines('am start --user 0 -W {0}'.format(intent))
+    def __start(self, cmdstr, filename=None, interval=0.5):
+        if filename:
+            catfile = 'cat /data/data/com.ztemt.test.kit/files/{0}'.format(filename)
+            pattern = re.compile('^(\d+)$')
+            m = pattern.match(self.shellreadline(catfile))
+            if m:
+                tm1 = long(m.groups()[0])
+            else:
+                tm1 = 0
+        p = self.shellopen('am {0}'.format(cmdstr))
+        y = lambda x: x.terminate()
+        t = threading.Timer(5, y, args=(p,))
+        t.start()
+        lines = p.stdout.readlines()
+        t.cancel()
+        while filename:
+            lines = self.shellreadlines(catfile)
+            m = pattern.match(lines[0].strip())
+            if m:
+                tm2 = long(m.groups()[0])
+            else:
+                tm2 = 0
+            if not tm1 == tm2:
+                return lines[1:]
+            time.sleep(interval)
+        return lines
 
-    def startservice(self, intent):
-        return self.shellreadlines('am startservice --user 0 -W {0}'.format(intent))
+    def startactivity(self, intent, filename=None, interval=0.5):
+        return self.__start('start --user 0 -W {0}'.format(intent), filename=filename, interval=interval)
+
+    def startservice(self, intent, filename=None, interval=0.5):
+        return self.__start('startservice --user 0 -W {0}'.format(intent), filename=filename, interval=interval)
 
     def kill(self, proc):
         for pid in [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == proc]:
@@ -103,12 +135,21 @@ class Uia(object):
     def destroy(self):
         self.adb.shell('rm -f /data/local/tmp/{0}'.format(os.path.basename(self.jar)))
 
-class Apk(object):
+class Kit(object):
 
     def __init__(self, adb, apk):
         self.adb = adb
         self.apk = apk
         self.adb.install(self.apk)
+
+    def __service(self, cmdname, filename=None, interval=0.5):
+        return self.adb.startservice('-a com.ztemt.test.action.TEST_KIT --es command {0}'.format(cmdname), filename=filename, interval=interval)
+
+    def disablekeyguard(self):
+        self.__service('disableKeyguard')
+
+    def packages(self):
+        return eval(self.__service('getPackageList', 'packages')[0])
 
 if __name__ == '__main__':
     print(devices())

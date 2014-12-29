@@ -124,14 +124,14 @@ class Executor(object):
         report.close()
 
     def monkey(self, outdir, package):
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()
         workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
         crashs = 0
         anrs = 0
         if package == 'com.android.systemui':
             uia = adbkit.Uia(self.adb, os.path.join(workdir, 'memory', 'systemui.jar'))
-            uia.runtest('cn.nubia.systemui.test.StatusBar', extras=['-e Cycle 10'])
-            uia.runtest('cn.nubia.systemui.test.MultiTaskTest', extras=['-e Cycle 10'])
+            uia.runtest('cn.nubia.systemui.test.StatusBar', extras=['-e Cycle 50'])
+            uia.runtest('cn.nubia.systemui.test.MultiTaskTest', extras=['-e Cycle 50'])
             uia.destroy()
         else:
             self.adb.push(os.path.join(workdir, 'monkey.sh'), '/data/local/tmp')
@@ -144,6 +144,7 @@ class Executor(object):
                     break
                 time.sleep(30)
             t.stop()
+            t.join()
             file = os.path.join(outdir, 'monkey.txt')
             self.adb.pull('/data/local/tmp/monkey.txt', file)
             output = open(file, 'r')
@@ -162,7 +163,7 @@ class Executor(object):
             os.mkdir(self.workout)
 
         self.adb.reboot(30)
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()
 
         time.sleep(5)
         self.meminfo('开机启动进程及内存占用')
@@ -190,5 +191,5 @@ class Executor(object):
             writer.writerow([package, maxpss, minpss, avgpss, crashs, anrs])
             report.close()
 
-        self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.systemui.MultiTaskTestCase#testRecycle')
+        self.adb.uia.runtest('com.android.systemui.MultiTaskTestCase', 'testRecycle')
         self.meminfo('后台常驻进程及内存占用')

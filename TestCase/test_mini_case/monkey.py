@@ -196,7 +196,10 @@ class MonkeyMonitorThread(threading.Thread):
             line = self.adb.shellreadline('uiautomator dump')
             if line == 'ERROR: null root node returned by UiTestAutomationBridge.':
                 self.adb.kill('com.android.commands.monkey')
-            time.sleep(self.interval)
+            i = 0
+            while self.loop and i < self.interval:
+                time.sleep(1)
+                i += 1
 
     def stop(self):
         self.loop = False
@@ -284,10 +287,13 @@ class Executor(object):
                 break
             time.sleep(30)
         t.stop()
+        t.join()
 
-        self.adb.waitforboot()
-        self.adb.pull('/data/local/tmp/monkey.txt', outdir)
-        output = open(os.path.join(outdir, 'monkey.txt'), 'r')
+        outfile = os.path.join(outdir, 'monkey.txt')
+        while not os.path.exists(outfile):
+            self.adb.pull('/data/local/tmp/monkey.txt', outfile)
+            time.sleep(3)
+        output = open(outfile, 'r')
         data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
         crashs = []
         anrs = []
@@ -377,10 +383,10 @@ class Executor(object):
 
     def execute(self):
         self.adb.reboot(30)
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()
 
         # eanble dumpsys gfxinfo
-        self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
+        self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
 
         pardir = os.path.join(self.workout, 'monkey')
         shutil.rmtree(pardir, ignore_errors=True)

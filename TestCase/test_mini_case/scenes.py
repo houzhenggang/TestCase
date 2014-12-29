@@ -69,7 +69,7 @@ class Executor(object):
 
         # restore the backup
         self.adb.shell('am force-stop cn.nubia.databackup')
-        self.adb.shellreadlines('uiautomator runtest automator.jar -c cn.nubia.databackup.RestoreTestCase#testRestore')
+        self.adb.uia.runtest('cn.nubia.databackup.RestoreTestCase', 'testRestore')
 
         self.adb.shell('rm -rf {0}'.format(pimdir))
         self.adb.shell('rm -rf {0}'.format(mediadir))
@@ -81,7 +81,7 @@ class Executor(object):
             self.adb.push(unicode(p4.strip(), 'utf-8').encode('gb2312'), mediadir)
 
         self.adb.reboot(30)
-        self.adb.shellreadlines('am startservice --user 0 -W -a com.ztemt.test.action.TEST_KIT --es command disableKeyguard')
+        self.adb.kit.disablekeyguard()
 
     def execute(self):
         self.workout = os.path.join(self.workout, 'scenes')
@@ -97,7 +97,7 @@ class Executor(object):
 
         model = self.adb.getprop('ro.product.model')
         if model == 'L50w':
-            self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
+            self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.sony.test.NativeListViewTest')
             self.scene('ContactTest', 'com.sonyericsson.android.socialphonebook', 'cn.sony.test.ContactTest')
             self.scene('DeveloperTest', 'com.android.settings', 'cn.sony.test.DeveloperTest')
@@ -105,7 +105,7 @@ class Executor(object):
             self.scene('BrowserTest', 'com.android.browser', 'cn.sony.test.BrowserTest')
             self.scene('LauncherTest', 'com.sonyericsson.home', 'cn.sony.test.LauncherTest')
         elif model == 'SM-G9008V':
-            self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
+            self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.sung.test.NativeListViewTest')
             self.scene('ContactTest', 'com.android.contacts', 'cn.sung.test.ContactTest')
             self.scene('DeveloperTest', '', 'cn.sung.test.DeveloperTest')
@@ -121,7 +121,7 @@ class Executor(object):
                 else:
                     self.importdata(configs[9], configs[13], configs[11], configs[15])
 
-            self.adb.shellreadlines('uiautomator runtest automator.jar -c com.android.settings.DevelopmentSettingsTestCase#testTrackFrameTimeDumpsysGfxinfo')
+            self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
             self.scene('NativeListViewTest', 'com.example.android.apis', 'cn.nubia.test.NativeListViewTest')
             self.scene('ContactTest', 'com.android.contacts', 'cn.nubia.test.ContactTest')
             self.scene('DeveloperTest', 'com.android.settings', 'cn.nubia.test.DeveloperTest')
