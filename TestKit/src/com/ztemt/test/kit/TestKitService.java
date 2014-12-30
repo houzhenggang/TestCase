@@ -66,35 +66,58 @@ public class TestKitService extends Service {
     }
 
     private void getPackageList() {
-        Intent query = new Intent(Intent.ACTION_MAIN).addCategory(
-                Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> activities = getPackageManager()
-                .queryIntentActivities(query, 0);
+        String[] categories = { Intent.CATEGORY_LAUNCHER, Intent.CATEGORY_HOME };
         JSONObject jobj = new JSONObject();
 
-        for (ResolveInfo info : activities) {
-            String packageName = info.activityInfo.packageName;
-            JSONObject activity = new JSONObject();
-
-            try {
-                activity.put("title", info.loadLabel(getPackageManager()).toString());
-                activity.put("name", info.activityInfo.name);
-                if (jobj.has(packageName)) {
-                    jobj.optJSONObject(packageName).getJSONArray("activities")
-                            .put(activity);
-                } else {
-                    PackageInfo pkgInfo = getPackageManager().getPackageInfo(
-                            packageName, PackageManager.GET_META_DATA);
-                    JSONObject obj = new JSONObject();
-                    obj.put("versionCode", pkgInfo.versionCode);
-                    obj.put("versionName", pkgInfo.versionName);
-                    obj.put("activities", new JSONArray().put(activity));
-                    jobj.put(packageName, obj);
+        for (String category : categories) {
+            Intent query = new Intent(Intent.ACTION_MAIN).addCategory(category);
+            List<ResolveInfo> activities = getPackageManager()
+                    .queryIntentActivities(query, 0);
+    
+            for (ResolveInfo info : activities) {
+                String packageName = info.activityInfo.packageName;
+                JSONObject activity = new JSONObject();
+    
+                try {
+                    activity.put("title", info.loadLabel(getPackageManager()).toString());
+                    activity.put("name", info.activityInfo.name);
+                    activity.put("category", category);
+                    if (jobj.has(packageName)) {
+                        jobj.optJSONObject(packageName).getJSONArray("activities")
+                                .put(activity);
+                    } else {
+                        PackageInfo pkgInfo = getPackageManager().getPackageInfo(
+                                packageName, PackageManager.GET_META_DATA);
+                        JSONObject obj = new JSONObject();
+                        obj.put("versionCode", pkgInfo.versionCode);
+                        obj.put("versionName", pkgInfo.versionName);
+                        obj.put("activities", new JSONArray().put(activity));
+                        jobj.put(packageName, obj);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (NameNotFoundException e) {
+                    e.printStackTrace();
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (NameNotFoundException e) {
-                e.printStackTrace();
+            }
+
+            String[] others = { "com.android.systemui" };
+            for (String packageName : others) {
+                if (!jobj.has(packageName)) {
+                    try {
+                        PackageInfo pkgInfo = getPackageManager().getPackageInfo(
+                                packageName, PackageManager.GET_META_DATA);
+                        JSONObject obj = new JSONObject();
+                        obj.put("versionCode", pkgInfo.versionCode);
+                        obj.put("versionName", pkgInfo.versionName);
+                        obj.put("activities", new JSONArray());
+                        jobj.put(packageName, obj);
+                    } catch (NameNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
 

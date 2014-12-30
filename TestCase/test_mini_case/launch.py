@@ -60,7 +60,8 @@ class Executor(object):
 
         for key, value in self.packages.items():
             for activity in value['activities']:
-                r = self.appinfo(key, activity['title'], activity['name'])
-                writer.writerow([r[0], r[1], r[2][0], r[2][1], r[2][2], r[2][3], r[2][4], r[2][5], r[3], r[4], r[5]])
-                report.flush()
+                if activity.get('category') == 'android.intent.category.LAUNCHER':
+                    r = self.appinfo(key, activity['title'], activity['name'])
+                    writer.writerow([r[0], r[1], r[2][0], r[2][1], r[2][2], r[2][3], r[2][4], r[2][5], r[3], r[4], r[5]])
+                    report.flush()
         report.close()

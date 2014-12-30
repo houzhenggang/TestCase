@@ -24,7 +24,7 @@ class DumpsysMeminfoThread(threading.Thread):
 
     def run(self):
         self.memlist = []
-        report = open(os.path.join(self.outdir, unicode('应用内存占用.csv', 'utf-8')), 'wb')
+        report = open(os.path.join(self.outdir, unicode('应用内存占用', 'utf-8').encode('gb2312') + '.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
         writer.writerow(['pss total', 'pss private', 'dalvik heap', 'dalvik used', 'native heap', 'native used'])
@@ -47,10 +47,11 @@ class DumpsysMeminfoThread(threading.Thread):
                     if m:
                         data['pss total']   = m.groups()[0]
                         data['pss private'] = m.groups()[1]
-            self.memlist.append(data)
-            writer.writerow([data.get('pss total', '0'), data.get('pss private', '0'), data.get('dalvik heap', '0'),
-                    data.get('dalvik used', '0'), data.get('native heap', '0'), data.get('native used', '0')])
-            report.flush()
+            if not data.get('pss total', '0') == '0':
+                self.memlist.append(data)
+                writer.writerow([data.get('pss total', '0'), data.get('pss private', '0'), data.get('dalvik heap', '0'),
+                        data.get('dalvik used', '0'), data.get('native heap', '0'), data.get('native used', '0')])
+                report.flush()
         report.close()
 
     def stat(self):
@@ -69,7 +70,6 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
         self.packages = packages
-        self.packages['com.android.systemui'] = None
 
     def setup(self):
         pass
@@ -108,7 +108,7 @@ class Executor(object):
         sorted(sysprocs)
         sorted(usrprocs)
 
-        report = open(os.path.join(self.workout, unicode(name + '.csv', 'utf-8')), 'wb')
+        report = open(os.path.join(self.workout, unicode(name, 'utf-8').encode('gb2312') + '.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
         writer.writerow(['开机自启动系统进程数', '开机自启动应用进程数', '合计'])
@@ -145,8 +145,12 @@ class Executor(object):
                 time.sleep(30)
             t.stop()
             t.join()
+
             file = os.path.join(outdir, 'monkey.txt')
-            self.adb.pull('/data/local/tmp/monkey.txt', file)
+            while not os.path.exists(file):
+                self.adb.waitforboot()
+                self.adb.pull('/data/local/tmp/monkey.txt', file)
+                time.sleep(3)
             output = open(file, 'r')
             for line in output.readlines():
                 if line.find('// CRASH:') > -1:
@@ -179,7 +183,7 @@ class Executor(object):
             t.join()
             maxpss, minpss, avgpss = t.stat()
 
-            file = unicode(os.path.join(self.workout, '应用内存占用汇总表.csv'), 'utf-8')
+            file = os.path.join(self.workout, unicode('应用内存占用汇总表', 'utf-8').encode('gb2312') + '.csv')
             if os.path.exists(file):
                 report = open(file, 'ab+')
                 writer = csv.writer(report, quoting=csv.QUOTE_ALL)
@@ -191,5 +195,9 @@ class Executor(object):
             writer.writerow([package, maxpss, minpss, avgpss, crashs, anrs])
             report.close()
 
-        self.adb.uia.runtest('com.android.systemui.MultiTaskTestCase', 'testRecycle')
+        self.adb.kit.disablekeyguard()
+        if int(self.adb.getprop('ro.build.version.sdk')) > 20:
+            self.adb.uia.runtest('com.android.systemui.NotificationTestCase', 'testClickRecycle')
+        else:
+            self.adb.uia.runtest('com.android.systemui.MultiTaskTestCase', 'testRecycle')
         self.meminfo('后台常驻进程及内存占用')

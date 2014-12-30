@@ -54,15 +54,11 @@ class Adb(object):
     def pull(self, remote, local):
         self.adbreadline('pull {0} \"{1}\"'.format(remote, local))
 
-    def install(self, local, reinstall=True, downgrade=False, sdcard=False):
-        tmpapk = '/data/local/tmp/tmp.apk'
-        if local:
-            self.push(local, tmpapk)
-        z = lambda y, z: z if y else ''
-        return self.shellreadlines('pm install {0} {1} {2} {3}'.format(z(reinstall, '-r'), z(downgrade, '-d'), z(sdcard, '-s'), tmpapk))
+    def install(self, local):
+        return self.adbreadlines('install -r {0}'.format(local))
 
     def uninstall(self, package):
-        return self.shellreadline('pm uninstall {0}'.format(package))
+        return self.adbreadlines('uninstall {0}'.format(package))
 
     def getprop(self, key):
         return self.shellreadline('getprop {0}'.format(key))

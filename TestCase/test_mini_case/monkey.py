@@ -209,7 +209,7 @@ class Executor(object):
     def __init__(self, adb, workout, packages):
         self.adb = adb
         self.workout = workout
-        self.packages = packages
+        self.packages = dict([x for x in packages.items() if x[1].get('activities')])
 
     def setup(self):
         print('Monkey type choices are:')
@@ -291,6 +291,7 @@ class Executor(object):
 
         outfile = os.path.join(outdir, 'monkey.txt')
         while not os.path.exists(outfile):
+            self.adb.waitforboot()
             self.adb.pull('/data/local/tmp/monkey.txt', outfile)
             time.sleep(3)
         output = open(outfile, 'r')
