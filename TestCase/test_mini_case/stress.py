@@ -4,11 +4,32 @@ import codecs
 import csv
 import os
 import sys
+import threading
 import time
 
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 import adbkit
+
+class StressMonitorThread(threading.Thread):
+
+    def __init__(self, adb):
+        threading.Thread.__init__(self)
+        self.adb = adb
+        self.loop = True
+
+    def run(self):
+        while self.loop:
+            i = 0
+            while self.loop and i < 30:
+                time.sleep(1)
+                i += 1
+            self.adb.waitforboot()
+            if not [x for x in self.adb.shellreadlines('ps') if x.split()[-1] == 'com.ztemt.test.stress']:
+                self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity')
+
+    def stop(self):
+        self.loop = False
 
 class Executor(object):
 
@@ -71,9 +92,12 @@ class Executor(object):
 
         if self.extras:
             tags = self.adb.getprop('ro.build.tags')
-            self.adb.uninstall('com.ztemt.test.stress')
             self.adb.install(os.path.join(self.workdir, 'StressTest_{0}.apk'.format(tags)))
+            t = StressMonitorThread(self.adb)
+            t.start()
             lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)), 'stress.csv', 30)
+            t.stop()
+            t.join()
             report = open(stress, 'wb')
             report.write(codecs.BOM_UTF8)
             report.writelines(lines)

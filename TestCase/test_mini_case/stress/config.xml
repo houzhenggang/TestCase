@@ -117,6 +117,10 @@
         <param name="次数" extra="--ei NetworkTest3_times" type="int">10</param>
         <desc>统计最长搜网时间（需插卡）；如果是多卡机，请都插上。</desc>
     </item>
+    <item name="SD卡升级测试" type="apk">
+        <param name="次数" extra="--ei SystemUpdateTest_times" type="int">10</param>
+        <desc>SD卡升级，请将升级包拷贝至/sdcard/update.zip</desc>
+    </item>
     <item name="USB亮灭屏测试" type="uia">
         <param name="次数" extra="-e Cycle" type="int">10</param>
         <desc>USB亮屏熄屏</desc>

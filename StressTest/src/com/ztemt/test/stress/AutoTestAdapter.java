@@ -42,6 +42,7 @@ import com.ztemt.test.stress.item.RingtoneTest;
 import com.ztemt.test.stress.item.SDCardTest;
 import com.ztemt.test.stress.item.SleepWakeTest;
 import com.ztemt.test.stress.item.SmsTest;
+import com.ztemt.test.stress.item.SystemUpdateTest;
 import com.ztemt.test.stress.item.TemperatureSensorTest;
 import com.ztemt.test.stress.item.VibratorTest;
 import com.ztemt.test.stress.item.WifiTest;
@@ -95,7 +96,8 @@ public class AutoTestAdapter extends BaseAdapter {
                 new BasebandVersionTest(context),
                 new NetworkTest2(context),
                 new NetworkTest3(context),
-                new DataTest(context)
+                new DataTest(context),
+                new SystemUpdateTest(context),
         };
         mPrefUtils = new PreferenceUtils(context);
     }

@@ -22,6 +22,7 @@ public class AirplaneModeTest extends BaseTest {
             int state = serviceState.getState();
 
             if (state == ServiceState.STATE_POWER_OFF) {
+                mTelephonyManager.listen(this, PhoneStateListener.LISTEN_NONE);
                 setSuccess();
                 resume();
             }

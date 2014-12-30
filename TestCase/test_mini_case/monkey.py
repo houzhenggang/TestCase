@@ -213,8 +213,8 @@ class Executor(object):
 
     def setup(self):
         print('Monkey type choices are:')
-        print('    1. monkey')
-        print('    2. single')
+        print('     1. monkey')
+        print('     2. single')
         try:
             self.single = input('\nWhich would you like? [2] ') == 2
         except SyntaxError:

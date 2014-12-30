@@ -22,6 +22,7 @@ public class WifiTest extends BaseTest {
                 int state = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
                         WifiManager.WIFI_STATE_UNKNOWN);
                 if (state == WifiManager.WIFI_STATE_ENABLED) {
+                    unregisterReceiver();
                     setSuccess();
                     resume();
                 }
@@ -50,7 +51,7 @@ public class WifiTest extends BaseTest {
         // Pause the thread, resume after Wi-Fi turn on
         pause();
 
-        mContext.unregisterReceiver(mReceiver);
+        unregisterReceiver();
         mWifiManager.setWifiEnabled(false);
         sleep(10000);
     }
@@ -58,5 +59,13 @@ public class WifiTest extends BaseTest {
     @Override
     public String getTitle() {
         return mContext.getString(R.string.wifi_test);
+    }
+
+    private void unregisterReceiver() {
+        try {
+            mContext.unregisterReceiver(mReceiver);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
     }
 }

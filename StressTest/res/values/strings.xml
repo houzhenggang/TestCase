@@ -44,6 +44,7 @@
     <string name="network_test3">Network Search Maximum Time Test</string>
     <string name="data_test">Data Test</string>
     <string name="baseband_version_test">Baseband Version Test</string>
+    <string name="system_update_test">System Update Test</string>
     <string name="report_titles">\"Test Item\",\"Total Times\",\"Test Times\",\"Success Times\",\"Failure Times\"\n</string>
 
 </resources>

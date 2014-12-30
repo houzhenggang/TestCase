@@ -74,6 +74,7 @@ class Adb(object):
         self.adb('wait-for-device')
         while self.getprop('sys.boot_completed') != '1':
             time.sleep(interval)
+            self.adb('wait-for-device')
 
     def reboot(self, interval=0.1):
         self.adb('reboot')
@@ -100,6 +101,7 @@ class Adb(object):
         lines = p.stdout.readlines()
         t.cancel()
         while filename:
+            self.waitforboot()
             lines = self.shellreadlines(catfile)
             m = pattern.match(lines[0].strip())
             if m:
