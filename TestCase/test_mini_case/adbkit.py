@@ -115,9 +115,15 @@ class Adb(object):
     def startservice(self, intent, filename=None, interval=0.5):
         return self.__start('startservice --user 0 -W {0}'.format(intent), filename=filename, interval=interval)
 
+    def pidof(self, name):
+        return [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == name]
+
     def kill(self, proc):
-        for pid in [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == proc]:
+        for pid in self.pidof(proc):
             self.shell('kill {0}'.format(pid))
+
+    def ismonkey(self):
+        return self.pidof('com.android.commands.monkey')
 
 class Uia(object):
 
