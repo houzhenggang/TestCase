@@ -55,7 +55,7 @@ class Adb(object):
         self.adbreadline('pull {0} \"{1}\"'.format(remote, local))
 
     def install(self, local):
-        return self.adbreadlines('install -r {0}'.format(local))
+        return self.adbreadlines('install -r \"{0}\"'.format(local))
 
     def uninstall(self, package):
         return self.adbreadlines('uninstall {0}'.format(package))

@@ -1,13 +1,14 @@
 #!/bin/sh
 
 workdir=/data/local/tmp/memory
-packout=${workdir}/out/${1}
-infotmp=${workdir}/meminfo.tmp
+outfile=${workdir}/out/${1}/meminfo.txt
+tmpfile=${workdir}/meminfo.tmp
+
+touch ${outfile}
 
 while [ true ]
 do
     sleep 2
-    dumpsys meminfo ${1} > ${infotmp}
-    cat ${infotmp} >> ${packout}/meminfo.txt
-    rm -rf ${infotmp}
+    dumpsys meminfo ${1} > ${tmpfile}
+    cat ${tmpfile} >> ${outfile}
 done

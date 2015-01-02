@@ -9,38 +9,64 @@ import sys
 import threading
 import time
 
-def stat(outdir):
-    list = []
-    output = open(os.path.join(outdir, 'meminfo.txt'), 'r')
-    for line in output.readlines():
-        if line.strip().startswith('Native'):
-            data = {}
-            m = re.match('Native[ Heap]+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line.strip())
-            if m:
-                data['native heap'] = m.groups()[4]
-                data['native used'] = m.groups()[5]
-        elif line.strip().startswith('Dalvik'):
-            m = re.match('Dalvik[ Heap]+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line.strip())
-            if m:
-                data['dalvik heap'] = m.groups()[4]
-                data['dalvik used'] = m.groups()[5]
-        elif line.strip().startswith('TOTAL'):
-            m = re.match('TOTAL\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line.strip())
-            if m:
-                data['pss total']   = m.groups()[0]
-                data['pss private'] = m.groups()[1]
-            if not data.get('pss total', '0') == '0':
-                list.append(data)
-    output.close()
+import monkey
 
-    report = open(os.path.join(outdir, unicode('应用内存占用', 'utf-8').encode('gb2312') + '.csv'), 'wb')
+def meminfo(outdir, name, outname):
+    start = False
+    usrprocs = []
+    sysprocs = []
+    outpath = os.path.join(outdir, name)
+    output = open(outpath, 'r')
+    for line in output.readlines():
+        if line.startswith('Total PSS by process:'):
+            start = True
+        elif line.startswith('Total PSS by OOM adjustment:'):
+            start = False
+        elif line.startswith('Total PSS by category:'):
+            start = False
+        elif line.startswith('Total RAM:'):
+            m = re.search('Total RAM: (\d+) kB', line)
+            if m:
+                total = m.groups()[0]
+        elif line.startswith(' Free RAM:'):
+            m = re.search('Free RAM: (\d+) kB', line)
+            if m:
+                free = m.groups()[0]
+        elif line.startswith(' Used RAM:'):
+            m = re.search('Used RAM: (\d+) kB', line)
+            if m:
+                used = m.groups()[0]
+        elif start:
+            m = re.search('([1-9][0-9]*) kB: (\S+) \(pid (\d+)', line)
+            if m:
+                g = m.groups()
+                if g[1].startswith('cn.nubia') or g[1].startswith('com.android'):
+                    usrprocs.append(g)
+                else:
+                    sysprocs.append(g)
+    output.close()
+    os.unlink(outpath)
+
+    sorted(sysprocs)
+    sorted(usrprocs)
+
+    report = open(os.path.join(outdir, unicode(outname, 'utf-8').encode('gb2312') + '.csv'), 'wb')
     report.write(codecs.BOM_UTF8)
     writer = csv.writer(report, quoting=csv.QUOTE_ALL)
-    writer.writerow(['pss total', 'pss private', 'dalvik heap', 'dalvik used', 'native heap', 'native used'])
-    for data in list:
-        writer.writerow([data.get('pss total', '0'), data.get('pss private', '0'), data.get('dalvik heap', '0'),
-                data.get('dalvik used', '0'), data.get('native heap', '0'), data.get('native used', '0')])
+    writer.writerow(['系统进程数', '应用进程数', '合计'])
+    writer.writerow([len(sysprocs), len(usrprocs), len(sysprocs) + len(usrprocs)])
+    writer.writerow(['总内存', '已用内存'])
+    writer.writerow([total, used])
+    writer.writerow(['系统进程名', '系统进程内存'])
+    for x, y, z in sysprocs:
+        writer.writerow([y, x])
+    writer.writerow(['应用进程名', '应用进程内存'])
+    for x, y, z in usrprocs:
+        writer.writerow([y, x])
     report.close()
+
+def stat(outdir):
+    list = monkey.meminfo(outdir, '应用内存占用')
 
     crashs = anrs = 0
     output = os.path.join(outdir, 'monkey.txt')
@@ -75,6 +101,7 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
         self.packages = packages
+        self.usedpkgs = dict([x for x in packages.items() if x[1].get('activities')])
 
     def setup(self):
         outpath = '/data/local/tmp/memory/out'
@@ -88,76 +115,19 @@ class Executor(object):
                 return
         self.restart = False
 
-    def meminfo(self, name):
-        start = False
-        usrprocs = []
-        sysprocs = []
-        for line in self.adb.shellreadlines('dumpsys meminfo'):
-            if line.startswith('Total PSS by process:'):
-                start = True
-            elif line.startswith('Total PSS by OOM adjustment:'):
-                start = False
-            elif line.startswith('Total PSS by category:'):
-                start = False
-            elif line.startswith('Total RAM:'):
-                m = re.search('Total RAM: (\d+) kB', line)
-                if m:
-                    total = m.groups()[0]
-            elif line.startswith(' Free RAM:'):
-                m = re.search('Free RAM: (\d+) kB', line)
-                if m:
-                    free = m.groups()[0]
-            elif line.startswith(' Used RAM:'):
-                m = re.search('Used RAM: (\d+) kB', line)
-                if m:
-                    used = m.groups()[0]
-            elif start:
-                m = re.search('([1-9][0-9]*) kB: (\S+) \(pid (\d+)', line)
-                if m:
-                    g = m.groups()
-                    if g[1].startswith('cn.nubia') or g[1].startswith('com.android'):
-                        usrprocs.append(g)
-                    else:
-                        sysprocs.append(g)
-        sorted(sysprocs)
-        sorted(usrprocs)
-
-        report = open(os.path.join(self.workout, unicode(name, 'utf-8').encode('gb2312') + '.csv'), 'wb')
-        report.write(codecs.BOM_UTF8)
-        writer = csv.writer(report, quoting=csv.QUOTE_ALL)
-        writer.writerow(['系统进程数', '应用进程数', '合计'])
-        writer.writerow([len(sysprocs), len(usrprocs), len(sysprocs) + len(usrprocs)])
-        writer.writerow(['总内存', '已用内存'])
-        writer.writerow([total, used])
-        writer.writerow(['系统进程名', '系统进程内存'])
-        for x, y, z in sysprocs:
-            writer.writerow([y, x])
-        writer.writerow(['应用进程名', '应用进程内存'])
-        for x, y, z in usrprocs:
-            writer.writerow([y, x])
-        report.close()
-
     def execute(self):
         self.workout = os.path.join(self.workout, 'memory')
+        shutil.rmtree(self.workout, ignore_errors=True)
+        if not os.path.exists(self.workout):
+            os.mkdir(self.workout)
+
         tmppath = '/data/local/tmp/memory'
 
-        if self.restart:
-            if not os.path.exists(self.workout):
-                os.mkdir(self.workout)
-        else:
-            shutil.rmtree(self.workout, ignore_errors=True)
-            if not os.path.exists(self.workout):
-                os.mkdir(self.workout)
-
-            self.adb.reboot(30)
-            self.adb.kit.disablekeyguard()
-
-            time.sleep(5)
-            self.meminfo('开机启动进程及内存占用')
-
+        if not self.restart:
             pkgpath = os.path.join(self.workout, 'packages.txt')
             pkgfile = open(pkgpath, 'wb')
-            pkgfile.write('{0}\n'.format('\n'.join(self.packages.keys())))
+            pkgfile.write('{0}\n'.format('\n'.join(self.usedpkgs.keys())))
+            pkgfile.write('{0}\n'.format('com.android.systemui'))
             pkgfile.close()
 
             self.adb.shell('rm -rf {0}'.format(tmppath))
@@ -170,6 +140,8 @@ class Executor(object):
             self.adb.push(pkgpath, tmppath)
             os.remove(pkgpath)
 
+            self.adb.reboot(30)
+            self.adb.kit.disablekeyguard()
             self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh &'.format(tmppath))
 
             while True:
@@ -192,10 +164,7 @@ class Executor(object):
             for name in names:
                 if name == 'meminfo.txt':
                     stat(dirpath)
-
-        self.adb.kit.disablekeyguard()
-        if int(self.adb.getprop('ro.build.version.sdk')) > 20:
-            self.adb.uia.runtest('com.android.systemui.NotificationTestCase', 'testClickRecycle')
-        else:
-            self.adb.uia.runtest('com.android.systemui.MultiTaskTestCase', 'testRecycle')
-        self.meminfo('后台常驻进程及内存占用')
+                elif name == 'meminfo-1.txt':
+                    meminfo(dirpath, name, '开机启动进程及内存占用')
+                elif name == 'meminfo-2.txt':
+                    meminfo(dirpath, name, '后台常驻进程及内存占用')

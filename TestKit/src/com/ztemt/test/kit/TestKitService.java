@@ -16,7 +16,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -67,53 +66,37 @@ public class TestKitService extends Service {
 
     private void getPackageList() {
         String[] categories = { Intent.CATEGORY_LAUNCHER, Intent.CATEGORY_HOME };
+        PackageManager pm = getPackageManager();
         JSONObject jobj = new JSONObject();
 
-        for (String category : categories) {
-            Intent query = new Intent(Intent.ACTION_MAIN).addCategory(category);
-            List<ResolveInfo> activities = getPackageManager()
-                    .queryIntentActivities(query, 0);
-    
-            for (ResolveInfo info : activities) {
-                String packageName = info.activityInfo.packageName;
-                JSONObject activity = new JSONObject();
-    
-                try {
-                    activity.put("title", info.loadLabel(getPackageManager()).toString());
-                    activity.put("name", info.activityInfo.name);
-                    activity.put("category", category);
-                    if (jobj.has(packageName)) {
-                        jobj.optJSONObject(packageName).getJSONArray("activities")
-                                .put(activity);
-                    } else {
-                        PackageInfo pkgInfo = getPackageManager().getPackageInfo(
-                                packageName, PackageManager.GET_META_DATA);
-                        JSONObject obj = new JSONObject();
-                        obj.put("versionCode", pkgInfo.versionCode);
-                        obj.put("versionName", pkgInfo.versionName);
-                        obj.put("activities", new JSONArray().put(activity));
-                        jobj.put(packageName, obj);
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (NameNotFoundException e) {
-                    e.printStackTrace();
-                }
+        for (PackageInfo pi : pm.getInstalledPackages(0)) {
+            String packageName = pi.packageName;
+
+            JSONObject obj = new JSONObject();
+            try {
+                obj.put("versionCode", pi.versionCode);
+                obj.put("versionName", pi.versionName);
+                obj.put("activities", new JSONArray());
+                jobj.put(packageName, obj);
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
 
-            String[] others = { "com.android.systemui" };
-            for (String packageName : others) {
-                if (!jobj.has(packageName)) {
+            for (String category : categories) {
+                Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(
+                        category).setPackage(packageName);
+                List<ResolveInfo> activities = pm.queryIntentActivities(intent, 0);
+
+                for (ResolveInfo ri : activities) {
+                    JSONObject activity = new JSONObject();
                     try {
-                        PackageInfo pkgInfo = getPackageManager().getPackageInfo(
-                                packageName, PackageManager.GET_META_DATA);
-                        JSONObject obj = new JSONObject();
-                        obj.put("versionCode", pkgInfo.versionCode);
-                        obj.put("versionName", pkgInfo.versionName);
-                        obj.put("activities", new JSONArray());
-                        jobj.put(packageName, obj);
-                    } catch (NameNotFoundException e) {
-                        e.printStackTrace();
+                        activity.put("title", ri.loadLabel(pm).toString());
+                        activity.put("name", ri.activityInfo.name);
+                        activity.put("category", category);
+                        if (jobj.has(packageName)) {
+                            jobj.optJSONObject(packageName).getJSONArray(
+                                    "activities").put(activity);
+                        }
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }

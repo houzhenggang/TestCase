@@ -40,27 +40,36 @@ def monkey(outdir, packages):
             m = re.search('elapsed time=(\d+)ms', line)
             if m:
                 data['time'] = int(m.groups()[0])
-        elif line.find('// CRASH:') > -1:
-            data['crash'] = data['crash'] + 1
-            crash = {'package': line.strip()[3:]}
-            crashs.append(crash)
-        elif line.startswith('// Long Msg:'):
-            ss = line.strip().split(': ')
-            if 'crash' in locals():
-                crash['type'] = ss[1]
-                if len(ss) > 2:
-                    crash['reason'] = ss[2]
-                else:
-                    crash['reason'] = 'no cause'
-        elif line.find('// NOT RESPONDING:') > -1:
-            m = re.search('// (NOT RESPONDING: .+ \(pid \d+\))', line)
+        elif line.find('CRASH:') > -1:
+            data['crash'] += 1
+            m = re.search('((CRASH: (\S+)) \(pid \d+\))', line)
             if m:
-                data['anr'] = data['anr'] + 1
-                anr = {'package': m.groups()[0]}
-                anrs.append(anr)
+                g = m.groups()
+                crash = {'package': g[0], 'pkgnoid': g[1], 'pkgname': g[2]}
+            else:
+                crash = {}
+            crashs.append(crash)
+        elif line.find('Short Msg:') > -1:
+            m = re.search('Short Msg: ([\w\.]+)', line)
+            if m:
+                crash['type'] = m.groups()[0]
+        elif line.find('Long Msg:') > -1:
+            m = re.search('Long Msg: ([\w\.]+)(: (.+))?', line)
+            if m:
+                g = m.groups()
+                crash['type'] = g[0]
+                crash['reason'] = g[2] if g[2] else 'no cause'
+        elif line.find('NOT RESPONDING:') > -1:
+            data['anr'] += 1
+            m = re.search('((NOT RESPONDING: (\S+)) \(pid \d+\))', line)
+            if m:
+                g = m.groups()
+                anr = {'package': g[0], 'pkgnoid': g[1], 'pkgname': g[2]}
+            else:
+                anr = {}
+            anrs.append(anr)
         elif line.startswith('Reason:'):
-            if 'anr' in locals():
-                anr['reason'] = line[8:].strip()
+            anr['reason'] = line[8:].strip()
     output.close()
 
     report = open(os.path.join(outdir, 'monkey.csv'), 'wb')
@@ -72,65 +81,70 @@ def monkey(outdir, packages):
             '不响应的原因', '异常的模块名不带PID用于汇总', '不响应的模块名不带PID用于汇总'])
     for i in range(max(len(crashs), len(anrs))):
         if i < len(crashs):
-            crash_package = crashs[i]['package']
-            crash_type = crashs[i].get('type', '')
-            crash_reason = crashs[i].get('reason', '')
+            crash_package = crashs[i].get('package')
+            crash_pkgnoid = crashs[i].get('pkgnoid')
+            crash_pkgname = crashs[i].get('pkgname')
+            crash_version = packages[crash_pkgname]['versionName'] if crash_pkgname in packages else ''
+            crash_type = crashs[i].get('type')
+            crash_reason = crashs[i].get('reason')
         else:
             crash_package = ''
+            crash_pkgnoid = ''
+            crash_pkgname = ''
+            crash_version = ''
             crash_type = ''
             crash_reason = ''
+
         if i < len(anrs):
-            anr_package = anrs[i]['package']
-            anr_reason = anrs[i].get('reason', '')
+            anr_package = anrs[i].get('package')
+            anr_pkgnoid = anrs[i].get('pkgnoid')
+            anr_pkgname = anrs[i].get('pkgname')
+            anr_version = packages[anr_pkgname]['versionName'] if anr_pkgname in packages else ''
+            anr_reason = anrs[i].get('reason')
         else:
             anr_package = ''
+            anr_pkgnoid = ''
+            anr_pkgname = ''
+            anr_version = ''
             anr_reason = ''
-        crash_package_no_pid = crash_package.split(' (')[0]
-        crash_package_real = crash_package_no_pid.split(':')[-1].strip()
-        if crash_package_real in packages:
-            crash_package_version = packages[crash_package_real]['versionName']
-        else:
-            crash_package_version = ''
-        anr_package_no_pid = anr_package.split(' (')[0]
-        anr_package_real = anr_package_no_pid.split(':')[-1].strip()
-        if anr_package_real in packages:
-            anr_package_version = packages[anr_package_real]['versionName']
-        else:
-            anr_package_version = ''
-        writer.writerow([crash_package, crash_package_version, crash_type, crash_reason, anr_package,
-                anr_package_version, anr_reason, crash_package_no_pid, anr_package_no_pid])
+
+        writer.writerow([crash_package, crash_version, crash_type, crash_reason, anr_package,
+                anr_version, anr_reason, crash_pkgnoid, anr_pkgnoid])
     report.close()
 
-def meminfo(outdir):
+def meminfo(outdir, outname='meminfo'):
     list = []
-    data = {}
     output = open(os.path.join(outdir, 'meminfo.txt'), 'r')
     for line in output.readlines():
         if line.strip().startswith('Native'):
+            data = {}
             m = re.match('Native[ Heap]+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line.strip())
             if m:
-                data['native_heap_size'] = m.groups()[4]
-                data['native_heap_alloc'] = m.groups()[5]
-                data['native_heap_free'] = m.groups()[6]
+                data['native heap'] = m.groups()[4]
+                data['native used'] = m.groups()[5]
         elif line.strip().startswith('Dalvik'):
             m = re.match('Dalvik[ Heap]+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line.strip())
             if m:
-                data['dalvik_heap_size'] = m.groups()[4]
-                data['dalvik_heap_alloc'] = m.groups()[5]
-                data['dalvik_heap_free'] = m.groups()[6]
-        if len(data) == 6:
-            list.append(data.copy())
-            data.clear()
+                data['dalvik heap'] = m.groups()[4]
+                data['dalvik used'] = m.groups()[5]
+        elif line.strip().startswith('TOTAL'):
+            m = re.match('TOTAL\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line.strip())
+            if m:
+                data['pss total']   = m.groups()[0]
+                data['pss private'] = m.groups()[1]
+            if not data.get('pss total', '0') == '0':
+                list.append(data)
     output.close()
 
-    report = open(os.path.join(outdir, 'meminfo.csv'), 'wb')
+    report = open(os.path.join(outdir, unicode(outname, 'utf-8').encode('gb2312') + '.csv'), 'wb')
     report.write(codecs.BOM_UTF8)
     writer = csv.writer(report, quoting=csv.QUOTE_ALL)
-    writer.writerow(['Native Heap Size', 'Native Heap Alloc', 'Native Heap Free', 'Dalvik Heap Size', 'Dalvik Heap Alloc', 'Dalvik Heap Free'])
-    if len(list) > 0:
-        for item in list:
-            writer.writerow([item['native_heap_size'], item['native_heap_alloc'], item['native_heap_free'], item['dalvik_heap_size'], item['dalvik_heap_alloc'], item['dalvik_heap_free']])
+    writer.writerow(['pss total', 'pss private', 'dalvik heap', 'dalvik used', 'native heap', 'native used'])
+    for data in list:
+        writer.writerow([data.get('pss total', '0'), data.get('pss private', '0'), data.get('dalvik heap', '0'),
+                data.get('dalvik used', '0'), data.get('native heap', '0'), data.get('native used', '0')])
     report.close()
+    return list
 
 def gfxinfo(outdir):
     list = []
@@ -211,7 +225,8 @@ class Executor(object):
     def __init__(self, adb, workout, packages):
         self.adb = adb
         self.workout = workout
-        self.packages = dict([x for x in packages.items() if x[1].get('activities')])
+        self.packages = packages
+        self.usedpkgs = dict([x for x in packages.items() if x[1].get('activities')])
 
     def setup(self):
         outpath = '/data/local/tmp/monkey/out'
@@ -265,7 +280,7 @@ class Executor(object):
         if self.single:
             selected = []
             print('Monkey package choices are:')
-            pkgkeys = self.packages.keys()
+            pkgkeys = self.usedpkgs.keys()
             for i in range(len(pkgkeys)):
                 print('    {0:>2}. {1}'.format(i + 1, pkgkeys[i]))
             options = ','.join([str(x) for x in range(1, len(pkgkeys) + 1)])
@@ -274,10 +289,10 @@ class Executor(object):
                 try:
                     index = int(select.strip()) - 1
                     index = divmod(index, len(pkgkeys))[1]
-                    selected.append((pkgkeys[index], self.packages[pkgkeys[index]]))
+                    selected.append((pkgkeys[index], self.usedpkgs[pkgkeys[index]]))
                 except ValueError:
                     continue
-            self.packages = dict(selected) if selected else self.packages
+            self.usedpkgs = dict(selected) if selected else self.usedpkgs
             print('')
 
     def execute(self):
@@ -293,12 +308,13 @@ class Executor(object):
             self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
 
         tmppath = '/data/local/tmp/monkey'
+
         if self.restart:
             self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh &'.format(tmppath))
         else:
             pkgpath = os.path.join(self.workout, 'packages.txt')
             pkgfile = open(pkgpath, 'wb')
-            pkgfile.write('{0}\n'.format('\n'.join(self.packages.keys())))
+            pkgfile.write('{0}\n'.format('\n'.join(self.usedpkgs.keys())))
             pkgfile.close()
 
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))

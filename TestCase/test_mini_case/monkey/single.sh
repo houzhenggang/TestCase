@@ -16,10 +16,13 @@ do
         logcat -c
         logcat -v time -s Choreographer:I I:s > ${packout}/skpinfo.txt &
         sid=$!
+        sh ${workdir}/monitor.sh &
+        nid=$!
         monkey -p ${package} -s $1 --throttle $2 --pct-syskeys 0 --pct-anyevent 0 --ignore-timeouts --ignore-crashes -v $3 > ${packout}/monkey.txt 2>&1
         kill ${mid}
         kill ${gid}
         kill ${sid}
+        kill ${nid}
         am force-stop ${package}
     fi
 done < ${workdir}/packages.txt

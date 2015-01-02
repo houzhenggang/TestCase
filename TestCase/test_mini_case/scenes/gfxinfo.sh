@@ -1,12 +1,14 @@
 #!/bin/sh
 
 workdir=/data/local/tmp/scenes
-infotmp=${workdir}/gfxinfo.tmp
+outfile=${2}/gfxinfo.txt
+tmpfile=${workdir}/gfxinfo.tmp
+
+touch ${outfile}
 
 while [ true ]
 do
     sleep 1
-    dumpsys gfxinfo ${1} > ${infotmp}
-    cat ${infotmp} >> ${2}/gfxinfo.txt
-    rm -f ${infotmp}
+    dumpsys gfxinfo ${1} > ${tmpfile}
+    cat ${tmpfile} >> ${outfile}
 done

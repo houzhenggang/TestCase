@@ -1,13 +1,14 @@
 #!/bin/sh
 
 workdir=/data/local/tmp/monkey
-packout=${workdir}/out/${1}
-infotmp=${workdir}/gfxinfo.tmp
+outfile=${workdir}/out/${1}/gfxinfo.txt
+tmpfile=${workdir}/gfxinfo.tmp
+
+touch ${outfile}
 
 while [ true ]
 do
     sleep 5
-    dumpsys gfxinfo ${1} > ${infotmp}
-    cat ${infotmp} >> ${packout}/gfxinfo.txt
-    rm -rf ${infotmp}
+    dumpsys gfxinfo ${1} > ${tmpfile}
+    cat ${tmpfile} >> ${outfile}
 done
