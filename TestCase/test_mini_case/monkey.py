@@ -318,6 +318,7 @@ class Executor(object):
             pkgfile.close()
 
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+            self.adb.waitforboot()
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'monkey'), tmppath)

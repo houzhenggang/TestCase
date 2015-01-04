@@ -130,6 +130,7 @@ class Executor(object):
             pkgfile.write('{0}\n'.format('com.android.systemui'))
             pkgfile.close()
 
+            self.adb.waitforboot()
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -147,7 +148,7 @@ class Executor(object):
             while True:
                 self.adb.waitforboot()
                 for i in range(3):
-                    if self.adb.ismonkey() or self.adb.pidof('uiautomator'):
+                    if self.adb.ismonkey() or self.adb.isuiautomator():
                         finish = False
                     else:
                         finish = True

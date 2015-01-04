@@ -70,9 +70,13 @@ def main():
     adb = adbkit.Adb(serialno)
     if adb.adbreadline('get-state') != 'device':
         if serialno:
-            print('Make sure your device {0} only online'.format(serialno))
+            raw_input('Make sure your device {0} only online. '.format(serialno))
         else:
-            print('Please connect your device')
+            raw_input('Please connect your device. ')
+        sys.exit(2)
+
+    if adb.ismonkey() or adb.isuiautomator():
+        raw_input('Please wait for the current test completed. ')
         sys.exit(2)
 
     workdir = os.path.dirname(os.path.realpath(sys.argv[0]))

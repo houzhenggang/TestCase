@@ -125,6 +125,9 @@ class Adb(object):
     def ismonkey(self):
         return self.pidof('com.android.commands.monkey')
 
+    def isuiautomator(self):
+        return self.pidof('uiautomator')
+
 class Uia(object):
 
     def __init__(self, adb, jar):

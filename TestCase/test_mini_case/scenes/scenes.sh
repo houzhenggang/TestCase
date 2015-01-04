@@ -10,8 +10,7 @@ function execute()
         mkdir -p ${outpath}
         sh ${workdir}/gfxinfo.sh $2 ${outpath} &
         gid=$!
-        logcat -c
-        logcat -v time -s Choreographer:I I:s > ${outpath}/skpinfo.txt &
+        sh ${workdir}/skpinfo.sh ${outpath} &
         sid=$!
         cp -f ${workdir}/ScenesTest.jar /data/local/tmp
         uiautomator runtest ScenesTest.jar -c $3

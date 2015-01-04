@@ -13,8 +13,7 @@ do
         mid=$!
         sh ${workdir}/gfxinfo.sh ${package} &
         gid=$!
-        logcat -c
-        logcat -v time -s Choreographer:I I:s > ${packout}/skpinfo.txt &
+        sh ${workdir}/skpinfo.sh ${package} &
         sid=$!
         sh ${workdir}/monitor.sh &
         nid=$!

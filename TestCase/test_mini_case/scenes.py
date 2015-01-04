@@ -44,6 +44,7 @@ class Executor(object):
         tmppath = '/data/local/tmp/scenes'
         if not self.restart:
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+            self.adb.waitforboot()
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'scenes'), tmppath)
@@ -56,7 +57,7 @@ class Executor(object):
         while True:
             self.adb.waitforboot()
             for i in range(3):
-                if self.adb.pidof('uiautomator'):
+                if self.adb.isuiautomator():
                     finish = False
                     break
                 else:
