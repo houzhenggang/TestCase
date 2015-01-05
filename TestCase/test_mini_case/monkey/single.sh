@@ -22,6 +22,7 @@ do
         kill ${gid}
         kill ${sid}
         kill ${nid}
+        kill `${workdir}/busybox pidof logcat`
         am force-stop ${package}
     fi
 done < ${workdir}/packages.txt

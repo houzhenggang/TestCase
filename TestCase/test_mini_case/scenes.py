@@ -44,7 +44,6 @@ class Executor(object):
         tmppath = '/data/local/tmp/scenes'
         if not self.restart:
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-            self.adb.waitforboot()
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'scenes'), tmppath)
@@ -55,19 +54,17 @@ class Executor(object):
         self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh &'.format(tmppath))
 
         while True:
-            self.adb.waitforboot()
             for i in range(3):
                 if self.adb.isuiautomator():
                     finish = False
                     break
                 else:
                     finish = True
-                    time.sleep(5)
+                    time.sleep(15)
             if finish:
                 break
             time.sleep(30)
 
-        self.adb.waitforboot()
         self.adb.pull('{0}/out'.format(tmppath), self.workout)
         time.sleep(3)
 

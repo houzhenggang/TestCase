@@ -55,7 +55,6 @@ class Executor(object):
         except1 = except2 = except3 = None
         uninstall = False
 
-        self.adb.waitforboot()
         p = self.adb.shellopen('pm install -r -d {0} /data/local/tmp/tmp.apk'.format('-s' if sdcard else ''))
         y = lambda x: x.terminate()
         t = threading.Timer(90, y, args=(p,))
@@ -65,7 +64,6 @@ class Executor(object):
 
         install = 'Success' in [line.strip() for line in lines]
         if install:
-            self.adb.waitforboot()
             p = self.adb.shellopen('monkey -p {0} -s 10 --throttle 10000 --ignore-timeouts --ignore-crashes -v 10'.format(package))
             y = lambda x: self.adb.kill('com.android.commands.monkey')
             t = threading.Timer(60, y, args=(p,))
@@ -84,7 +82,6 @@ class Executor(object):
             t.cancel()
 
             time.sleep(3)
-            self.adb.waitforboot()
             p = self.adb.shellopen('pm uninstall {0}'.format(package))
             y = lambda x: x.terminate()
             t = threading.Timer(60, y, args=(p,))

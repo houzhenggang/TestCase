@@ -24,7 +24,6 @@ class StressMonitorThread(threading.Thread):
             while self.loop and i < 30:
                 time.sleep(1)
                 i += 1
-            self.adb.waitforboot()
             if not [x for x in self.adb.shellreadlines('ps') if x.split()[-1] == 'com.ztemt.test.stress']:
                 self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity')
 

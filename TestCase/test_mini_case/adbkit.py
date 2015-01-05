@@ -25,25 +25,39 @@ class Adb(object):
         self.kit = Kit(self, os.path.join(workdir, 'TestKit.apk'))
 
     def adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
+        self.waitforboot()
         return subprocess.Popen('{0} {1}'.format(self.prefix, cmd), shell=shell, stdout=stdout, stderr=stderr)
 
     def shellopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
         return self.adbopen('shell {0}'.format(cmd), shell=shell, stdout=stdout, stderr=stderr)
 
-    def adbreadline(self, cmd):
+    def __adbreadline(self, cmd):
         return os.popen('{0} {1}'.format(self.prefix, cmd)).readline().strip()
 
+    def adbreadline(self, cmd):
+        self.waitforboot()
+        return self.__adbreadline(cmd)
+
+    def __shellreadline(self, cmd):
+        return self.__adbreadline('shell {0}'.format(cmd))
+
     def shellreadline(self, cmd):
-        return self.adbreadline('shell {0}'.format(cmd))
+        self.waitforboot()
+        return self.__shellreadline(cmd)
 
     def adbreadlines(self, cmd):
+        self.waitforboot()
         return os.popen('{0} {1}'.format(self.prefix, cmd)).readlines()
 
     def shellreadlines(self, cmd):
         return self.adbreadlines('shell {0}'.format(cmd))
 
-    def adb(self, cmd):
+    def __adb(self, cmd):
         os.system('{0} {1}'.format(self.prefix, cmd))
+
+    def adb(self, cmd):
+        self.waitforboot()
+        self.__adb(cmd)
 
     def shell(self, cmd):
         self.adb('shell {0}'.format(cmd))
@@ -60,26 +74,26 @@ class Adb(object):
     def uninstall(self, package):
         return self.adbreadlines('uninstall {0}'.format(package))
 
+    def __getprop(self, key):
+        return self.__shellreadline('getprop {0}'.format(key))
+
     def getprop(self, key):
-        return self.shellreadline('getprop {0}'.format(key))
+        self.waitforboot()
+        return self.__getprop(key)
 
     def setprop(self, key, value):
         self.shellreadline('setprop {0} \"{1}\"'.format(key, value))
 
     def waitforboot(self, interval=30):
-        self.adb('wait-for-device')
-        while self.getprop('sys.boot_completed') != '1':
+        while True:
+            self.__adb('wait-for-device')
+            if self.__getprop('sys.boot_completed') == '1':
+                break
             time.sleep(interval)
-            self.adb('wait-for-device')
 
     def reboot(self, interval=0.1):
         self.adb('reboot')
         self.waitforboot(interval)
-
-    def screenshot(self, local):
-        screenshot = '/data/local/tmp/screenshot.png'
-        self.shell('screencap -p {0}'.format(screenshot))
-        self.pull(screenshot, local)
 
     def __start(self, cmdstr, filename=None, interval=0.5):
         if filename:
@@ -97,7 +111,6 @@ class Adb(object):
         lines = p.stdout.readlines()
         t.cancel()
         while filename:
-            self.waitforboot()
             lines = self.shellreadlines(catfile)
             m = pattern.match(lines[0].strip())
             if m:
