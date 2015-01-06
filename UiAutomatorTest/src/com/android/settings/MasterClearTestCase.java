@@ -1,5 +1,7 @@
 package com.android.settings;
 
+import android.widget.TextView;
+
 import com.android.uiautomator.core.UiObject;
 import com.android.uiautomator.core.UiObjectNotFoundException;
 import com.android.uiautomator.core.UiScrollable;
@@ -17,14 +19,14 @@ public class MasterClearTestCase extends AutomatorTestCase {
     }
 
     public void testMasterClear() throws UiObjectNotFoundException {
-        UiScrollable list = new UiScrollable(
-                new UiSelector().resourceId("android:id/list"));
-        UiObject other = list.getChildByText(
-                new UiSelector().resourceId("android:id/title"), "其他");
+        UiScrollable list = new UiScrollable(new UiSelector().scrollable(true));
+        UiObject other = list.getChildByText(new UiSelector().className(
+                TextView.class), "其他");
         other.clickAndWaitForNewWindow();
-        UiObject title = new UiObject(new UiSelector().resourceId(
-                "android:id/title").text("恢复出厂设置"));
+        UiObject title = new UiObject(new UiSelector().text("恢复出厂设置"));
         title.clickAndWaitForNewWindow();
+        title = new UiObject(new UiSelector().resourceId(
+                "android:id/title").text("恢复出厂设置"));
         title.clickAndWaitForNewWindow();
         UiObject reset = new UiObject(new UiSelector().resourceId(
                 "com.android.settings:id/btn_reset_master_clear"));

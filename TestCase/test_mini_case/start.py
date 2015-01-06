@@ -194,7 +194,7 @@ def main():
         pass
 
     raw_input('All test finished: elapsed time {0}s, press ENTER to exit.'.format(round(end - start, 2)))
-    adb.uninstall('com.ztemt.test.kit')
+    adb.kit.uninstall()
 
 if __name__ == '__main__':
     try:

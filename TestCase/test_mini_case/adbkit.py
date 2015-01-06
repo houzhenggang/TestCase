@@ -7,6 +7,8 @@ import sys
 import threading
 import time
 
+import compat
+
 def devices():
     results = []
     p = subprocess.Popen('adb devices', shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -24,22 +26,41 @@ class Adb(object):
         self.uia = Uia(self, os.path.join(workdir, 'automator.jar'))
         self.kit = Kit(self, os.path.join(workdir, 'TestKit.apk'))
 
-    def adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
-        self.waitforboot()
+    def __adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
         return subprocess.Popen('{0} {1}'.format(self.prefix, cmd), shell=shell, stdout=stdout, stderr=stderr)
 
-    def shellopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
-        return self.adbopen('shell {0}'.format(cmd), shell=shell, stdout=stdout, stderr=stderr)
+    def __shellopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
+        return self.__adbopen('shell {0}'.format(cmd), shell=shell, stdout=stdout, stderr=stderr)
 
     def __adbreadline(self, cmd):
-        return os.popen('{0} {1}'.format(self.prefix, cmd)).readline().strip()
+        return self.__adbopen(cmd).stdout.readline().strip()
+
+    def __shellreadline(self, cmd):
+        return self.__shellopen(cmd).stdout.readline().strip()
+
+    def __adbreadlines(self, cmd):
+        return self.__adbopen(cmd).stdout.readlines()
+
+    def __shellreadlines(self, cmd):
+        return self.__shellopen(cmd).stdout.readlines()
+
+    def __adb(self, cmd):
+        self.__adbopen(cmd).wait()
+
+    def __shell(self, cmd):
+        self.__shellopen(cmd).wait()
+
+    def adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
+        self.waitforboot()
+        return self.__adbopen(cmd, shell, stdout, stderr)
+
+    def shellopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
+        self.waitforboot()
+        return self.__shellopen(cmd, shell, stdout, stderr)
 
     def adbreadline(self, cmd):
         self.waitforboot()
         return self.__adbreadline(cmd)
-
-    def __shellreadline(self, cmd):
-        return self.__adbreadline('shell {0}'.format(cmd))
 
     def shellreadline(self, cmd):
         self.waitforboot()
@@ -47,20 +68,19 @@ class Adb(object):
 
     def adbreadlines(self, cmd):
         self.waitforboot()
-        return os.popen('{0} {1}'.format(self.prefix, cmd)).readlines()
+        return self.__adbreadlines(cmd)
 
     def shellreadlines(self, cmd):
-        return self.adbreadlines('shell {0}'.format(cmd))
-
-    def __adb(self, cmd):
-        os.system('{0} {1}'.format(self.prefix, cmd))
+        self.waitforboot()
+        return self.__shellreadlines(cmd)
 
     def adb(self, cmd):
         self.waitforboot()
         self.__adb(cmd)
 
     def shell(self, cmd):
-        self.adb('shell {0}'.format(cmd))
+        self.waitforboot()
+        self.__shell(cmd)
 
     def push(self, local, remote):
         self.adbreadline('push \"{0}\" {1}'.format(local, remote))
@@ -118,9 +138,10 @@ class Adb(object):
             else:
                 tm2 = 0
             if not tm1 == tm2:
-                return lines[1:]
+                lines = lines[1:]
+                break
             time.sleep(interval)
-        return lines
+        return [line.strip() for line in lines]
 
     def startactivity(self, intent, filename=None, interval=0.5):
         return self.__start('start --user 0 -W {0}'.format(intent), filename=filename, interval=interval)
@@ -146,13 +167,18 @@ class Uia(object):
     def __init__(self, adb, jar):
         self.adb = adb
         self.jar = jar
+        self.install()
+
+    def install(self):
         self.adb.push(self.jar, '/data/local/tmp')
 
     def runtest(self, clsname, method=None, extras=None):
+        if not os.path.basename(self.jar) in [line.split()[-1] for line in self.adb.shellreadlines('ls -F /data/local/tmp')]:
+            self.install()
         return self.adb.shellreadlines('uiautomator runtest {0} -c {1}{2} {3}'.format(os.path.basename(self.jar), clsname,
                 '#' + method if method else '', ' '.join(extras) if extras else ''))
 
-    def destroy(self):
+    def uninstall(self):
         self.adb.shell('rm -f /data/local/tmp/{0}'.format(os.path.basename(self.jar)))
 
 class Kit(object):
@@ -160,6 +186,9 @@ class Kit(object):
     def __init__(self, adb, apk):
         self.adb = adb
         self.apk = apk
+        self.install()
+
+    def install(self):
         self.adb.install(self.apk)
 
     def __service(self, cmdname, filename=None, interval=0.5):
@@ -170,6 +199,9 @@ class Kit(object):
 
     def packages(self):
         return eval(self.__service('getPackageList', 'packages')[0])
+
+    def uninstall(self):
+        self.adb.uninstall(compat.Apk(self.apk).package)
 
 if __name__ == '__main__':
     print(devices())

@@ -36,10 +36,9 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
         self.workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-        self.workdir = os.path.join(self.workdir, 'stress')
 
     def setup(self):
-        config = open(os.path.join(self.workdir, 'config.xml'), 'r')
+        config = open(os.path.join(self.workdir, 'stress', 'config.xml'), 'r')
         tree = ElementTree(file=config)
         items = tree.findall('item')
 
@@ -60,12 +59,12 @@ class Executor(object):
         print('')
 
         self.extras = []
-        self.uiauto = []
+        self.pyfunc = []
         for item in items:
             if item in selected:
                 print('Parameters for {0}:'.format(item.attrib['name'].encode('gb2312')))
-                if item.attrib['type'] == 'uia':
-                    self.uiauto.append(item)
+                if item.attrib['type'] == 'pyf':
+                    self.pyfunc.append(item)
                 for param in item.findall('param'):
                     if param.attrib['type'] == 'int':
                         value = int(param.text)
@@ -80,7 +79,7 @@ class Executor(object):
                         value = value if value else param.text
                     if item.attrib['type'] == 'apk':
                         self.extras.append('{0} {1}'.format(param.attrib['extra'], value))
-                    elif item.attrib['type'] == 'uia':
+                    elif item.attrib['type'] == 'pyf':
                         param.text = value
                 print('')
 
@@ -91,7 +90,7 @@ class Executor(object):
 
         if self.extras:
             tags = self.adb.getprop('ro.build.tags')
-            self.adb.install(os.path.join(self.workdir, 'StressTest_{0}.apk'.format(tags)))
+            self.adb.install(os.path.join(self.workdir, 'stress', 'StressTest_{0}.apk'.format(tags)))
             t = StressMonitorThread(self.adb)
             t.start()
             lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)), 'stress.csv', 30)
@@ -99,11 +98,11 @@ class Executor(object):
             t.join()
             report = open(stress, 'wb')
             report.write(codecs.BOM_UTF8)
-            report.writelines(lines)
+            report.write('{0}{1}'.format(os.linesep.join(lines), os.linesep))
             report.close()
             self.adb.uninstall('com.ztemt.test.stress')
 
-        if self.uiauto:
+        if self.pyfunc:
             if os.path.exists(stress):
                 report = open(stress, 'ab+')
                 writer = csv.writer(report, quoting=csv.QUOTE_ALL)
@@ -112,21 +111,36 @@ class Executor(object):
                 report.write(codecs.BOM_UTF8)
                 writer = csv.writer(report, quoting=csv.QUOTE_ALL)
                 writer.writerow(['测试项', '总次数', '测试次数', '成功次数', '失败次数'])
-            for item in self.uiauto:
+            for item in self.pyfunc:
                 es = []
                 for param in item.findall('param'):
-                    es.append('{0} {1}'.format(param.attrib['extra'], param.text))
-                uia = adbkit.Uia(self.adb, os.path.join(self.workdir, item.find('jar').text))
-                success = 0
-                failure = 0
-                total = 0
-                for line in uia.runtest(item.find('class').text, item.find('method').text, es):
-                    if line.startswith('RESULT='):
-                        result = eval(line.split('=')[-1])
-                        success = result['SUCCESS']
-                        failure = result['FAILURE']
-                        total = result['TOTAL']
-                writer.writerow([item.attrib['name'].encode('utf-8'), total, success + failure, success, failure])
+                    es.append((param.attrib['extra'], param.text))
+                result = getattr(self, item.find('func').text)(**dict(es))
+                writer.writerow([item.attrib['name'].encode('utf-8'), result[0], result[1] + result[2], result[1], result[2]])
                 report.flush()
-                uia.destroy()
             report.close()
+
+    def usbwakeup(self, **args):
+        loop = int(args['loop'])
+        success = failure = 0
+        uia = adbkit.Uia(self.adb, os.path.join(self.workdir, 'stress', 'WakeUpStressTest.jar'))
+        for line in uia.runtest('cn.nubia.WakeUpTest', extras=['-e Cycle {0}'.format(loop)]):
+            if line.startswith('RESULT='):
+                result = eval(line.split('=')[-1])
+                success = result['SUCCESS']
+                failure = result['FAILURE']
+        uia.uninstall()
+        self.adb.uia.runtest('com.android.systemui.SleepWakeupTestCase', 'testWakeup')
+        return loop, success, failure
+
+    def masterclear(self, **args):
+        loop = int(args['loop'])
+        success = failure = 0
+        for i in range(loop):
+            self.adb.uia.runtest('com.android.settings.MasterClearTestCase', 'testMasterClear')
+            time.sleep(30)
+            self.adb.waitforboot()
+            success += 1
+            self.adb.uia.runtest('cn.nubia.setupwizard.SetupWizardTestCase', 'testSetupWizard')
+        self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
+        return loop, success, failure

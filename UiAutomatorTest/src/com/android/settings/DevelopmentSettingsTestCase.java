@@ -49,4 +49,10 @@ public class DevelopmentSettingsTestCase extends AutomatorTestCase {
         UiObject option = new UiObject(new UiSelector().textContains(text));
         option.click();
     }
+
+    @Override
+    protected void tearDown() throws Exception {
+        super.tearDown();
+        getUiDevice().pressHome();
+    }
 }

@@ -21,7 +21,8 @@ class Apk(object):
         self.label = ''
         self.launcher = ''
 
-        for line in os.popen('{0} d badging \"{1}\"'.format(os.path.join(workdir, 'aapt.exe'), apkfile)).readlines():
+        p = subprocess.Popen('{0} d badging \"{1}\"'.format(os.path.join(workdir, 'aapt.exe'), apkfile), stdout=subprocess.PIPE)
+        for line in p.stdout.readlines():
             if line.startswith('package:'):
                 m = re.search('name=\'(.*)\' versionCode=\'.*\' versionName=\'(.*)\'', line)
                 if m:

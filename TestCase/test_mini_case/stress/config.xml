@@ -26,7 +26,7 @@
     </item>
     <item name="通话测试" type="apk">
         <param name="次数" extra="--ei CallTest_times" type="int">10</param>
-        <param name="号码" extra="--es outgoing" type="str">10086</param>
+        <param name="号码" extra="--es outgoing" type="str">10010</param>
         <desc>拨打电话（需插卡）；如果是多卡机，请都插上。</desc>
     </item>
     <item name="短信测试" type="apk">
@@ -121,11 +121,14 @@
         <param name="次数" extra="--ei SystemUpdateTest_times" type="int">10</param>
         <desc>SD卡升级，请将升级包拷贝至/sdcard/update.zip</desc>
     </item>
-    <item name="USB亮灭屏测试" type="uia">
-        <param name="次数" extra="-e Cycle" type="int">10</param>
+    <item name="USB亮灭屏测试" type="pyf">
+        <param name="次数" extra="loop" type="int">10</param>
         <desc>USB亮屏熄屏</desc>
-        <jar>WakeUpStressTest.jar</jar>
-        <class>cn.nubia.WakeUpTest</class>
-        <method></method>
+        <func>usbwakeup</func>
+    </item>
+    <item name="恢复出厂设置测试" type="pyf">
+        <param name="次数" extra="loop" type="int">10</param>
+        <desc>恢复出厂设置</desc>
+        <func>masterclear</func>
     </item>
 </root>
