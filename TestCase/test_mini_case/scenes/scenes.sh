@@ -46,6 +46,14 @@ elif [ "${model}" == "Nexus 5" ] ;then
     execute 'NoteScaleTest' 'com.google.android.talk' 'cn.nexus.test.NoteScaleTest'
     execute 'LauncherTest' 'com.google.android.googlequicksearchbox' 'cn.nexus.test.LauncherTest'
     execute 'PressMenuTest' 'com.google.android.googlequicksearchbox' 'cn.nexus.test.PressMenuTest'
+elif [ "${model}" == "Coolpad 8675" ] ;then
+    execute 'NativeListViewTest' 'com.example.android.apis' 'cn.coolpad.test.NativeListViewTest'
+    execute 'ContactTest' 'com.yulong.android.contacts' 'cn.coolpad.test.ContactTest'
+    execute 'DeveloperTest' 'com.android.settings' 'cn.coolpad.test.DeveloperTest'
+    execute 'MultiTaskTest' 'com.android.systemui' 'cn.coolpad.test.MultiTaskTest'
+    execute 'NoteScaleTest' 'com.android.mms' 'cn.coolpad.test.NoteScaleTest'
+    execute 'LauncherTest' 'com.yulong.android.launcher3' 'cn.coolpad.test.LauncherTest'
+    execute 'PressMenuTest' 'com.yulong.android.launcher3' 'cn.coolpad.test.PressMenuTest'
 else
     execute 'NativeListViewTest' 'com.example.android.apis' 'cn.nubia.test.NativeListViewTest'
     execute 'ContactTest' 'com.android.contacts' 'cn.nubia.test.ContactTest'

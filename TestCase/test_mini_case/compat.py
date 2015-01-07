@@ -106,11 +106,19 @@ class Executor(object):
         self.adb.kit.disablekeyguard()
         remotedir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
 
+        pattern = re.compile('[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+\d+')
+        m1 = pattern.search(self.adb.shellreadlines('df data')[-1])
+        m2 = pattern.search(self.adb.shellreadlines('df sdcard')[-1])
+        shareddata = m1 and m2 and m1.groups() == m2.groups()
+
         report = open(os.path.join(self.workout, 'compat.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
         writer = csv.writer(report, quoting=csv.QUOTE_ALL)
-        writer.writerow(['文件名', '应用名', '包名', '版本', '安装i', '启动i', '卸载i', '安装s', '启动s', '卸载s',
-                '异常i-1', '异常i-2', '异常i-3', '异常s-1', '异常s-2', '异常s-3'])
+        if shareddata:
+            writer.writerow(['文件名', '应用名', '包名', '版本', '安装', '启动', '卸载', '异常1', '异常2', '异常3'])
+        else:
+            writer.writerow(['文件名', '应用名', '包名', '版本', '安装i', '启动i', '卸载i', '安装s', '启动s', '卸载s',
+                    '异常i-1', '异常i-2', '异常i-3', '异常s-1', '异常s-2', '异常s-3'])
 
         for filename in glob.glob(os.path.join(unicode(remotedir, 'utf-8'), '*.apk')):
             apkfile = filename.encode('gb2312')
@@ -118,9 +126,13 @@ class Executor(object):
             if apk.package:
                 self.adb.push(apkfile, '/data/local/tmp/tmp.apk')
                 r1 = self.install(apk.package)
-                r2 = self.install(apk.package, True)
-                writer.writerow([os.path.basename(filename), apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
-                        r2[0], r2[1], r2[2], r1[3], r1[4], r1[5], r2[3], r2[4], r2[5]])
+                if shareddata:
+                    writer.writerow([os.path.basename(filename), apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
+                            r1[3], r1[4], r1[5]])
+                else:
+                    r2 = self.install(apk.package, True)
+                    writer.writerow([os.path.basename(filename), apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
+                            r2[0], r2[1], r2[2], r1[3], r1[4], r1[5], r2[3], r2[4], r2[5]])
                 report.flush()
         report.close()
 

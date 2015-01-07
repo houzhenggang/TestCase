@@ -19,14 +19,13 @@ class Executor(object):
 
     def startactivity(self, package, activity, cleartask=True):
         lines = self.adb.startactivity('{0} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {1}/{2}'.format(
-                '--activity-clear-task' if cleartask else '', package, activity))
+                '--activity-clear-task' if cleartask else '-S', package, activity))
         for line in lines:
             if line.startswith('ThisTime:'):
                 return int(line[10:])
         return 0
 
     def appinfo(self, package, title, activity):
-        self.adb.shell('am force-stop {0}'.format(package))
         t = (
             self.startactivity(package, activity, False),
             self.startactivity(package, activity),

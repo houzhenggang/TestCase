@@ -126,7 +126,7 @@ class Adb(object):
                 tm1 = 0
         p = self.shellopen('am {0}'.format(cmdstr))
         y = lambda x: x.terminate()
-        t = threading.Timer(5, y, args=(p,))
+        t = threading.Timer(10, y, args=(p,))
         t.start()
         lines = p.stdout.readlines()
         t.cancel()
