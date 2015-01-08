@@ -8,7 +8,6 @@
         android:targetSdkVersion="20" />
 
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <permission
         android:name="com.ztemt.test.permission.TEST_KIT"

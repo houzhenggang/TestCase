@@ -130,6 +130,13 @@ class Executor(object):
             pkgfile.write('{0}\n'.format('com.android.systemui'))
             pkgfile.close()
 
+            self.adb.uia.runtest('com.android.settings.MasterClearTestCase', 'testMasterClear')
+            time.sleep(30)
+            self.adb.waitforboot()
+            self.adb.kit.disablekeyguard()
+            self.adb.uia.runtest('cn.nubia.setupwizard.SetupWizardTestCase', 'testSetupWizard')
+            self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
+
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -140,9 +147,7 @@ class Executor(object):
             self.adb.push(pkgpath, tmppath)
             os.remove(pkgpath)
 
-            self.adb.reboot(30)
-            self.adb.kit.disablekeyguard()
-            self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh &'.format(tmppath))
+            self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
 
             while True:
                 for i in range(3):

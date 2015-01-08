@@ -51,7 +51,7 @@ class Executor(object):
             self.adb.push(os.path.join(workdir, 'busybox'), tmppath)
             self.adb.shell('chmod 755 {0}/busybox'.format(tmppath))
 
-        self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh &'.format(tmppath))
+        self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
 
         while True:
             for i in range(3):

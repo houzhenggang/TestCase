@@ -310,7 +310,7 @@ class Executor(object):
         tmppath = '/data/local/tmp/monkey'
 
         if self.restart:
-            self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh &'.format(tmppath))
+            self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
         else:
             pkgpath = os.path.join(self.workout, 'packages.txt')
             pkgfile = open(pkgpath, 'wb')
@@ -328,7 +328,7 @@ class Executor(object):
             os.remove(pkgpath)
 
             params = [str(self.seed), str(self.throttle), str(self.count), str(1 if self.single else 0)]
-            self.adb.shellreadline('{0}/busybox nohup sh {0}/main.sh {1} &'.format(tmppath, ' '.join(params)))
+            self.adb.shellreadlines('sh {0}/main.sh {1}'.format(tmppath, ' '.join(params)))
 
         while True:
             for i in range(3):

@@ -31,8 +31,7 @@ public class MasterClearTestCase extends AutomatorTestCase {
         UiObject reset = new UiObject(new UiSelector().resourceId(
                 "com.android.settings:id/btn_reset_master_clear"));
         reset.click();
-        UiObject confirm = new UiObject(new UiSelector().resourceId(
-                "android:id/button1"));
+        UiObject confirm = new UiObject(new UiSelector().text("确认重置"));
         confirm.click();
     }
 }

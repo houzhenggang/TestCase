@@ -83,10 +83,10 @@ class Adb(object):
         self.__shell(cmd)
 
     def push(self, local, remote):
-        self.adbreadline('push \"{0}\" {1}'.format(local, remote))
+        self.adbreadlines('push \"{0}\" {1}'.format(local, remote))
 
     def pull(self, remote, local):
-        self.adbreadline('pull {0} \"{1}\"'.format(remote, local))
+        self.adbreadlines('pull {0} \"{1}\"'.format(remote, local))
 
     def install(self, local):
         return self.adbreadlines('install -r \"{0}\"'.format(local))

@@ -31,13 +31,13 @@ if [ "${model}" == "L50w" ] ;then
     execute 'DeveloperTest' 'com.android.settings' 'cn.sony.test.DeveloperTest'
     execute 'MultiTaskTest' 'com.android.systemui' 'cn.sony.test.MultiTaskTest'
     execute 'LauncherTest' 'com.sonyericsson.home' 'cn.sony.test.LauncherTest'
-elif [ "${model}" == "SM-G9008V" ] ;then
+elif [ "${model}" == "SM-G9006V" ] ;then
     execute 'NativeListViewTest' 'com.example.android.apis' 'cn.sung.test.NativeListViewTest'
     execute 'ContactTest' 'com.android.contacts' 'cn.sung.test.ContactTest'
     execute 'DeveloperTest' 'com.android.settings' 'cn.sung.test.DeveloperTest'
     execute 'MultiTaskTest' 'com.android.systemui' 'cn.sung.test.MultiTaskTest'
     execute 'NoteScaleTest' 'com.android.mms' 'cn.sung.test.NoteScaleTest'
-    execute 'LauncherTest' 'com.android.launcher' 'cn.sung.test.LauncherTest'
+    execute 'LauncherTest' 'com.sec.android.app.launcher' 'cn.sung.test.LauncherTest'
 elif [ "${model}" == "Nexus 5" ] ;then
     execute 'NativeListViewTest' 'com.example.android.apis' 'cn.nexus.test.NativeListViewTest'
     execute 'ContactTest' 'com.google.android.contacts' 'cn.nexus.test.ContactTest'
@@ -54,6 +54,14 @@ elif [ "${model}" == "Coolpad 8675" ] ;then
     execute 'NoteScaleTest' 'com.android.mms' 'cn.coolpad.test.NoteScaleTest'
     execute 'LauncherTest' 'com.yulong.android.launcher3' 'cn.coolpad.test.LauncherTest'
     execute 'PressMenuTest' 'com.yulong.android.launcher3' 'cn.coolpad.test.PressMenuTest'
+elif [ "${model}" == "MI 3W" ] ;then
+    execute 'NativeListViewTest' 'com.example.android.apis' 'cn.mi.test.NativeListViewTest'
+    execute 'ContactTest' 'com.android.contacts' 'cn.mi.test.ContactTest'
+    execute 'DeveloperTest' 'com.android.settings' 'cn.mi.test.DeveloperTest'
+    execute 'MultiTaskTest' 'com.miui.home' 'cn.mi.test.MultiTaskTest'
+    execute 'NoteScaleTest' 'com.android.mms' 'cn.mi.test.NoteScaleTest'
+    execute 'LauncherTest' 'com.miui.home' 'cn.mi.test.LauncherTest'
+    execute 'PressMenuTest' 'com.miui.home' 'cn.mi.test.PressMenuTest'
 else
     execute 'NativeListViewTest' 'com.example.android.apis' 'cn.nubia.test.NativeListViewTest'
     execute 'ContactTest' 'com.android.contacts' 'cn.nubia.test.ContactTest'
@@ -66,4 +74,3 @@ fi
 
 rm -f /data/local/tmp/ScenesTest.jar
 pm uninstall com.example.android.apis
-
