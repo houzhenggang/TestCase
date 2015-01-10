@@ -305,7 +305,7 @@ class Executor(object):
             if not self.restart:
                 self.adb.reboot(30)
             self.adb.kit.disablekeyguard()
-            self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
+            self.adb.kit.trackframetime()
 
         tmppath = '/data/local/tmp/monkey'
 

@@ -39,7 +39,7 @@ class Executor(object):
 
         self.adb.reboot(30)
         self.adb.kit.disablekeyguard()
-        self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
+        self.adb.kit.trackframetime()
 
         tmppath = '/data/local/tmp/scenes'
         if not self.restart:

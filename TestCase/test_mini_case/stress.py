@@ -130,17 +130,17 @@ class Executor(object):
                 success = result['SUCCESS']
                 failure = result['FAILURE']
         uia.uninstall()
-        self.adb.uia.runtest('com.android.systemui.SleepWakeupTestCase', 'testWakeup')
+        self.adb.kit.wakeup()
         return loop, success, failure
 
     def masterclear(self, **args):
         loop = int(args['loop'])
         success = failure = 0
         for i in range(loop):
-            self.adb.uia.runtest('com.android.settings.MasterClearTestCase', 'testMasterClear')
+            self.adb.kit.masterclear()
             time.sleep(30)
             self.adb.waitforboot()
             success += 1
-            self.adb.uia.runtest('cn.nubia.setupwizard.SetupWizardTestCase', 'testSetupWizard')
-        self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
+            self.adb.kit.setupwizard()
+        self.adb.kit.keepscreenon()
         return loop, success, failure

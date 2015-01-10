@@ -23,8 +23,7 @@ class Adb(object):
     def __init__(self, serialno):
         self.prefix = 'adb -s {0}'.format(serialno) if serialno else 'adb'
         workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-        self.uia = Uia(self, os.path.join(workdir, 'automator.jar'))
-        self.kit = Kit(self, os.path.join(workdir, 'TestKit.apk'))
+        self.kit = Kit(self, os.path.join(workdir, 'automator.jar'), os.path.join(workdir, 'TestKit.apk'))
 
     def __adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
         return subprocess.Popen('{0} {1}'.format(self.prefix, cmd), shell=shell, stdout=stdout, stderr=stderr)
@@ -144,10 +143,10 @@ class Adb(object):
         return [line.strip() for line in lines]
 
     def startactivity(self, intent, filename=None, interval=0.5):
-        return self.__start('start --user 0 -W {0}'.format(intent), filename=filename, interval=interval)
+        return self.__start('start --user 0 -W {0}'.format(intent), filename, interval)
 
     def startservice(self, intent, filename=None, interval=0.5):
-        return self.__start('startservice --user 0 -W {0}'.format(intent), filename=filename, interval=interval)
+        return self.__start('startservice --user 0 -W {0}'.format(intent), filename, interval)
 
     def pidof(self, name):
         return [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == name]
@@ -181,7 +180,7 @@ class Uia(object):
     def uninstall(self):
         self.adb.shell('rm -f /data/local/tmp/{0}'.format(os.path.basename(self.jar)))
 
-class Kit(object):
+class App(object):
 
     def __init__(self, adb, apk):
         self.adb = adb
@@ -191,17 +190,58 @@ class Kit(object):
     def install(self):
         self.adb.install(self.apk)
 
-    def __service(self, cmdname, filename=None, interval=0.5):
-        return self.adb.startservice('-a com.ztemt.test.action.TEST_KIT --es command {0}'.format(cmdname), filename=filename, interval=interval)
+    def startactivity(self, intent, filename=None, interval=0.5):
+        return self.adb.startactivity(intent, filename, interval)
 
-    def disablekeyguard(self):
-        self.__service('disableKeyguard')
-
-    def packages(self):
-        return eval(self.__service('getPackageList', 'packages')[0])
+    def startservice(self, intent, filename=None, interval=0.5):
+        return self.adb.startservice(intent, filename, interval)
 
     def uninstall(self):
         self.adb.uninstall(compat.Apk(self.apk).package)
+
+class Kit(object):
+
+    def __init__(self, adb, jar, apk):
+        self.adb = adb
+        self.uia = Uia(adb, jar)
+        self.app = App(adb, apk)
+
+    def runtest(self, clsname, method=None, extras=None):
+        self.uia.runtest(clsname, method, extras)
+
+    def masterclear(self):
+        self.runtest('com.android.settings.MasterClearTestCase', 'testMasterClear')
+
+    def keepscreenon(self):
+        self.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
+
+    def setupwizard(self):
+        self.runtest('cn.nubia.setupwizard.SetupWizardTestCase', 'testSetupWizard')
+
+    def wakeup(self):
+        self.runtest('com.android.systemui.SleepWakeupTestCase', 'testWakeup')
+
+    def localupdate(self):
+        self.runtest('cn.nubia.systemupdate.SystemUpdateTestCase', 'testLocalUpdate')
+
+    def trackframetime(self):
+        self.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testTrackFrameTimeDumpsysGfxinfo')
+
+    def restoredata(self):
+        self.runtest('cn.nubia.databackup.RestoreTestCase', 'testRestore')
+
+    def __startservice(self, cmdname, filename=None, interval=0.5):
+        return self.app.startservice('-a com.ztemt.test.action.TEST_KIT --es command {0}'.format(cmdname), filename, interval)
+
+    def getpackages(self):
+        return eval(self.__startservice('getPackageList', 'packages')[0])
+
+    def disablekeyguard(self):
+        self.__startservice('disableKeyguard')
+
+    def destroy(self):
+        self.uia.uninstall()
+        self.app.uninstall()
 
 if __name__ == '__main__':
     print(devices())

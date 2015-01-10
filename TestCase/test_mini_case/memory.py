@@ -130,12 +130,12 @@ class Executor(object):
             pkgfile.write('{0}\n'.format('com.android.systemui'))
             pkgfile.close()
 
-            self.adb.uia.runtest('com.android.settings.MasterClearTestCase', 'testMasterClear')
+            self.adb.kit.masterclear()
             time.sleep(30)
             self.adb.waitforboot()
             self.adb.kit.disablekeyguard()
-            self.adb.uia.runtest('cn.nubia.setupwizard.SetupWizardTestCase', 'testSetupWizard')
-            self.adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
+            self.adb.kit.setupwizard()
+            self.adb.kit.keepscreenon()
 
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))

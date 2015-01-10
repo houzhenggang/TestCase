@@ -31,7 +31,7 @@ def importdata(adb, type, p1, p2, p3, p4):
         adb.push(unicode(p2.strip(), 'utf-8').encode('gb2312'), pimdir)
 
     adb.shell('am force-stop cn.nubia.databackup')
-    adb.uia.runtest('cn.nubia.databackup.RestoreTestCase', 'testRestore')
+    adb.kit.restoredata()
 
     adb.shell('rm -rf {0}'.format(pimdir))
     adb.shell('rm -rf {0}'.format(mediadir))
@@ -116,7 +116,7 @@ def main():
         module = selected if selected else module
         print('')
 
-    packages = adb.kit.packages()
+    packages = adb.kit.getpackages()
     testpkgs = [line[8:].strip() for line in adb.shellreadlines('pm list package -s')]
     packages = dict([x for x in packages.items() if x[0] in testpkgs])
 
@@ -161,9 +161,9 @@ def main():
         sys.exit(2)
     print('')
 
-    adb.uia.runtest('com.android.systemui.SleepWakeupTestCase', 'testWakeup')
+    adb.kit.wakeup()
     adb.kit.disablekeyguard()
-    adb.uia.runtest('com.android.settings.DevelopmentSettingsTestCase', 'testKeepScreenOn')
+    adb.kit.keepscreenon()
 
     # import user data
     if not selected == 3:
@@ -194,7 +194,7 @@ def main():
         pass
 
     raw_input('All test finished: elapsed time {0}s, press ENTER to exit.'.format(round(end - start, 2)))
-    adb.kit.uninstall()
+    adb.kit.destroy()
 
 if __name__ == '__main__':
     try:

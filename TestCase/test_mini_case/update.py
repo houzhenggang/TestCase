@@ -46,6 +46,6 @@ class Executor(object):
         if self.buildfile:
             self.adb.push(self.buildfile, '/sdcard/update.zip')
             self.adb.kit.disablekeyguard()
-            self.adb.uia.runtest('cn.nubia.systemupdate.SystemUpdateTestCase', 'testLocalUpdate')
+            self.adb.kit.localupdate()
             time.sleep(30)
             self.adb.waitforboot()
