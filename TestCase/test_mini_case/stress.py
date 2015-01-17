@@ -8,6 +8,7 @@ import threading
 import time
 
 from xml.etree.ElementTree import ElementTree, Element, SubElement
+from Tkinter import *
 
 import adbkit
 
@@ -42,46 +43,58 @@ class Executor(object):
         tree = ElementTree(file=config)
         items = tree.findall('item')
 
-        selected = []
-        print('Stress test choices are:')
+        def callcheck(event):
+            getattr(event.widget, 'item').attrib['selected'] = getattr(event.widget, 'var').get()
+
+        def callinput(event):
+            var = getattr(event.widget, 'var')
+            param = getattr(event.widget, 'param')
+            if param.attrib['type'] == 'int' and not var.get().isdigit():
+                var.set(param.text)
+            else:
+                param.text = var.get()
+
+        root = Tk()
+        root.title('压力测试')
+        left = Frame(root)
+        left.grid(row=0, column=0, sticky=NW)
+        right = Frame(root)
+        right.grid(row=0, column=1, sticky=NW)
+        button = Button(root, text='确定', command=root.destroy)
+        button.grid(row=1, column=1, sticky=E)
+
         for i in range(len(items)):
-            print('    {0:>2}. {1:<18} [{2}]'.format(i + 1, items[i].attrib['name'].encode('gb2312'), items[i].find('desc').text.encode('gb2312')))
-        options = ','.join([str(x) for x in range(1, len(items) + 1)])
-        selects = raw_input('\nWhich would you like? [{0}] '.format(options)).split(',')
-        for select in selects:
-            try:
-                index = int(select.strip()) - 1
-                index = divmod(index, len(items))[1]
-                selected.append(items[index])
-            except ValueError:
-                continue
-        selected = selected if selected else items
-        print('')
+            dm = divmod(i, 2)
+            side = left if dm[1] == 0 else right
+            c = IntVar()
+            cb = Checkbutton(side, variable=c, text=items[i].attrib['name'])
+            cb.grid(row=dm[0], column=0, sticky=NW)
+            cb.bind('<Leave>', callcheck)
+            setattr(cb, 'var', c)
+            setattr(cb, 'item', items[i])
+            panel = Frame(side)
+            params = items[i].findall('param')
+            for j in range(len(params)):
+                Label(panel, text=params[j].attrib['name']).grid(row=j, column=0, sticky=W)
+                v = StringVar()
+                v.set(params[j].text)
+                en = Entry(panel, textvariable=v)
+                en.grid(row=j, column=1, sticky=W)
+                en.bind('<KeyRelease>', callinput)
+                setattr(en, 'var', v)
+                setattr(en, 'param', params[j])
+            panel.grid(row=dm[0], column=1, sticky=NW)
+            Label(side, text=items[i].find('desc').text).grid(row=dm[0], column=2, sticky=NW)
+        root.mainloop()
 
         self.extras = []
         self.pyfunc = []
-        for item in items:
-            if item in selected:
-                print('Parameters for {0}:'.format(item.attrib['name'].encode('gb2312')))
-                if item.attrib['type'] == 'pyf':
-                    self.pyfunc.append(item)
+        for item in [item for item in items if 'selected' in item.keys() and item.attrib['selected']]:
+            if item.attrib['type'] == 'pyf':
+                self.pyfunc.append(item)
+            elif item.attrib['type'] == 'apk':
                 for param in item.findall('param'):
-                    if param.attrib['type'] == 'int':
-                        value = int(param.text)
-                        try:
-                            value = input('{0}? [{1}] '.format(param.attrib['name'].encode('gb2312'), value))
-                        except SyntaxError:
-                            pass
-                        except NameError:
-                            pass
-                    elif param.attrib['type'] == 'str':
-                        value = raw_input('{0}? [{1}] '.format(param.attrib['name'].encode('gb2312'), param.text))
-                        value = value if value else param.text
-                    if item.attrib['type'] == 'apk':
-                        self.extras.append('{0} {1}'.format(param.attrib['extra'], value))
-                    elif item.attrib['type'] == 'pyf':
-                        param.text = value
-                print('')
+                    self.extras.append('{0} {1}'.format(param.attrib['extra'], param.text))
 
     def execute(self):
         stress = os.path.join(self.workout, 'stress.csv')

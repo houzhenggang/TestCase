@@ -119,7 +119,7 @@
     </item>
     <item name="SD卡升级测试" type="apk">
         <param name="次数" extra="--ei SystemUpdateTest_times" type="int">10</param>
-        <desc>SD卡升级，请将升级包拷贝至/sdcard/update.zip</desc>
+        <desc>SD卡升级，请将升级包拷贝至终端/sdcard/update.zip</desc>
     </item>
     <item name="USB亮灭屏测试" type="pyf">
         <param name="次数" extra="loop" type="int">10</param>
@@ -128,7 +128,7 @@
     </item>
     <item name="恢复出厂设置测试" type="pyf">
         <param name="次数" extra="loop" type="int">10</param>
-        <desc>恢复出厂设置</desc>
+        <desc>恢复出厂设置，请使用调试版本</desc>
         <func>masterclear</func>
     </item>
 </root>
