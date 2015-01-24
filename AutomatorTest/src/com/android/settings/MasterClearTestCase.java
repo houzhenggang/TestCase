@@ -19,9 +19,13 @@ public class MasterClearTestCase extends AutomatorTestCase {
     }
 
     public void testMasterClear() throws UiObjectNotFoundException {
-        UiScrollable list = new UiScrollable(new UiSelector().scrollable(true));
-        UiObject other = list.getChildByText(new UiSelector().className(
-                TextView.class), "其他");
+        UiObject other = new UiObject(new UiSelector().className(
+                TextView.class).text("其他"));
+        if (!other.exists()) {
+            UiScrollable list = new UiScrollable(new UiSelector().scrollable(true));
+            other = list.getChildByText(new UiSelector().className(
+                    TextView.class), "其他");
+        }
         other.clickAndWaitForNewWindow();
         UiObject title = new UiObject(new UiSelector().text("恢复出厂设置"));
         title.clickAndWaitForNewWindow();

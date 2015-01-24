@@ -11,6 +11,9 @@ import time
 
 import monkey
 
+from Tkinter import *
+from tkMessageBox import *
+
 def meminfo(outdir, name, outname):
     start = False
     usrprocs = []
@@ -108,12 +111,11 @@ class Executor(object):
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         if len(lines) > 0:
-            select = raw_input('Want to continue the last memory test? [N] ')
-            print('')
-            if select == 'Y' or select == 'y':
-                self.restart = True
-                return
-        self.restart = False
+            root = Tk()
+            self.retry = askyesno('内存测试', '是否继续上一次的测试', default=NO)
+            root.destroy()
+        else:
+            self.retry = False
 
     def execute(self):
         self.workout = os.path.join(self.workout, 'memory')
@@ -123,7 +125,7 @@ class Executor(object):
 
         tmppath = '/data/local/tmp/memory'
 
-        if not self.restart:
+        if not self.retry:
             pkgpath = os.path.join(self.workout, 'packages.txt')
             pkgfile = open(pkgpath, 'wb')
             pkgfile.write('{0}\n'.format('\n'.join(self.usedpkgs.keys())))
@@ -133,8 +135,9 @@ class Executor(object):
             self.adb.kit.masterclear()
             time.sleep(30)
             self.adb.waitforboot()
-            self.adb.kit.disablekeyguard()
-            self.adb.kit.setupwizard()
+            if not self.adb.getprop('ro.build.type') == 'user':
+                self.adb.kit.disablekeyguard()
+                self.adb.kit.setupwizard()
             self.adb.kit.keepscreenon()
 
             self.adb.shell('rm -rf {0}'.format(tmppath))

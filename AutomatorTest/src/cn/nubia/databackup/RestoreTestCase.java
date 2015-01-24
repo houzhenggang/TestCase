@@ -1,5 +1,6 @@
 package cn.nubia.databackup;
 
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -38,6 +39,12 @@ public class RestoreTestCase extends AutomatorTestCase {
             UiObject button = restore.getChild(new UiSelector().className(
                     TextView.class).text("还原"));
             button.clickAndWaitForNewWindow();
+
+            UiObject confirm = new UiObject(new UiSelector().className(
+                    Button.class).text("确定"));
+            if (confirm.exists()) {
+                confirm.click();
+            }
 
             UiObject loading = new UiObject(new UiSelector().resourceId(
                     "cn.nubia.databackup:id/loading_text"));

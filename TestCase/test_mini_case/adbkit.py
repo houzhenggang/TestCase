@@ -9,9 +9,12 @@ import time
 
 import compat
 
+workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+adbfile = os.path.join(workdir, 'adb.exe')
+
 def devices():
     results = []
-    p = subprocess.Popen('adb devices', shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen('{0} devices'.format(adbfile), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         m = re.search('^(\S+)\s+device', line)
         if m:
@@ -21,8 +24,10 @@ def devices():
 class Adb(object):
 
     def __init__(self, serialno):
-        self.prefix = 'adb -s {0}'.format(serialno) if serialno else 'adb'
-        workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        if serialno:
+            self.prefix = '{0} -s {1}'.format(adbfile, serialno)
+        else:
+            self.prefix = adbfile
         self.kit = Kit(self, os.path.join(workdir, 'automator.jar'), os.path.join(workdir, 'TestKit.apk'))
 
     def __adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
@@ -88,7 +93,9 @@ class Adb(object):
         self.adbreadlines('pull {0} \"{1}\"'.format(remote, local))
 
     def install(self, local):
-        return self.adbreadlines('install -r \"{0}\"'.format(local))
+        remote = '/data/local/tmp/tmp.apk'
+        self.push(local, remote)
+        return self.shellreadlines('pm install -r \"{0}\"'.format(remote))
 
     def uninstall(self, package):
         return self.adbreadlines('uninstall {0}'.format(package))
@@ -185,19 +192,35 @@ class App(object):
     def __init__(self, adb, apk):
         self.adb = adb
         self.apk = apk
+        self.package = compat.Apk(self.apk).package
         self.install()
 
+    def __installed(self):
+        return self.adb.shellreadline('pm list package {0}'.format(self.package))
+
     def install(self):
-        self.adb.install(self.apk)
+        while True:
+            for line in self.adb.install(self.apk):
+                if line.startswith('Failure'):
+                    if 'INSTALL_FAILED_UNKNOWN_SOURCES' in line:
+                        self.adb.startactivity('-a android.settings.SECURITY_SETTINGS')
+                    break
+            if self.__installed():
+                break
+            time.sleep(15)
 
     def startactivity(self, intent, filename=None, interval=0.5):
+        if not self.__installed():
+            self.install()
         return self.adb.startactivity(intent, filename, interval)
 
     def startservice(self, intent, filename=None, interval=0.5):
+        if not self.__installed():
+            self.install()
         return self.adb.startservice(intent, filename, interval)
 
     def uninstall(self):
-        self.adb.uninstall(compat.Apk(self.apk).package)
+        self.adb.uninstall(self.package)
 
 class Kit(object):
 

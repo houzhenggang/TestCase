@@ -17,31 +17,6 @@ import stress
 import update
 import uptime
 
-def importdata(adb, type, p1, p2, p3, p4):
-    pimdir = '/sdcard/nubia/PIM'
-    mediadir = '/sdcard/Media'
-
-    adb.shell('rm -rf {0}'.format(pimdir))
-    adb.shell('rm -rf {0}'.format(mediadir))
-
-    adb.shell('mkdir -p {0}'.format(pimdir))
-    if type == 1:
-        adb.push(unicode(p1.strip(), 'utf-8').encode('gb2312'), pimdir)
-    elif type == 2:
-        adb.push(unicode(p2.strip(), 'utf-8').encode('gb2312'), pimdir)
-
-    adb.shell('am force-stop cn.nubia.databackup')
-    adb.kit.restoredata()
-
-    adb.shell('rm -rf {0}'.format(pimdir))
-    adb.shell('rm -rf {0}'.format(mediadir))
-
-    adb.shell('mkdir -p {0}'.format(mediadir))
-    if type == 1:
-        adb.push(unicode(p3.strip(), 'utf-8').encode('gb2312'), mediadir)
-    elif type == 2:
-        adb.push(unicode(p4.strip(), 'utf-8').encode('gb2312'), mediadir)
-
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 's:m:t:')
@@ -149,14 +124,22 @@ def main():
 
     raw_input('Login your apps, press ENTER to continue after finished. ')
 
+    configs = open(os.path.join(workdir, 'config.txt'), 'r')
+    datadir = configs.readlines()[1]
+    datadir = unicode(datadir, 'utf-8').encode('gb2312')
+    configs.close()
     print('\nImported user data type choices are:')
-    print('     1.  general condition')
-    print('     2.  stress condition')
-    print('     3.  none')
+    dirs = os.listdir(datadir)
+    for i in range(len(dirs)):
+        print('    {0:>2}. {1}'.format(i + 1, dirs[i]))
+    else:
+        print('    {0:>2}. {1}'.format(i + 2, unicode('≤ªµº»Î', 'utf-8').encode('gb2312')))
+    selected = i + 1
     try:
-        selected = input('\nWhich would you like? [1] ')
+        selected = input('\nWhich would you like? [{0}] '.format(selected + 1)) - 1
+        selected = divmod(selected, len(dirs) + 1)[1]
     except SyntaxError:
-        selected = 1
+        pass
     except NameError:
         sys.exit(2)
     print('')
@@ -166,20 +149,55 @@ def main():
     adb.kit.keepscreenon()
 
     # import user data
-    if not selected == 3:
-        m = re.search('[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+\d+', adb.shellreadlines('df data')[-1])
-        if m:
-            z = lambda x, y: x * pow(1024, 'BKMGT'.find(y))
-            g = m.groups()
-            s = z(float(g[0]), g[1])
-        else:
-            s = 0
+    if selected < len(dirs):
+        data = []
+        seldir = os.path.join(datadir, dirs[selected])
+        for dir in os.listdir(seldir):
+            size = 0L
+            path = os.path.join(seldir, dir)
+            pimdir = mediadir = None
+            for dirpath, dirnames, names in os.walk(path):
+                dirname = os.path.basename(dirpath)
+                if dirname == 'PIM':
+                    pimdir = dirpath
+                elif dirname == 'Media':
+                    mediadir = dirpath
+                size += sum([os.path.getsize(os.path.join(dirpath, name)) for name in names])
+            if pimdir or mediadir:
+                data.append((size, pimdir, mediadir))
 
-        configs = open(os.path.join(workdir, 'config.txt'), 'r').readlines()
-        if s > 2.5 * pow(1024, 3):
-            importdata(adb, selected, configs[1], configs[5], configs[3], configs[7])
-        else:
-            importdata(adb, selected, configs[9], configs[13], configs[11], configs[15])
+        if data:
+            m = re.search('[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+\d+', adb.shellreadlines('df data')[-1])
+            if m:
+                z = lambda x, y: x * pow(1024, 'BKMGT'.find(y))
+                g = m.groups()
+                s = z(float(g[0]), g[1])
+            else:
+                s = 0
+            if s > 2.5 * pow(1024, 3):
+                data = [x for x in data if x[0] == max([i[0] for i in data])]
+            else:
+                data = [x for x in data if x[0] == min([i[0] for i in data])]
+
+            pimdir = '/sdcard/nubia/PIM'
+            mediadir = '/sdcard/Media'
+
+            adb.shell('rm -rf {0}'.format(pimdir))
+            adb.shell('rm -rf {0}'.format(mediadir))
+
+            if data[0][1]:
+                adb.shell('mkdir -p {0}'.format(pimdir))
+                adb.push(data[0][1], pimdir)
+
+            adb.shell('am force-stop cn.nubia.databackup')
+            adb.kit.restoredata()
+
+            adb.shell('rm -rf {0}'.format(pimdir))
+            adb.shell('rm -rf {0}'.format(mediadir))
+
+            if data[0][2]:
+                adb.shell('mkdir -p {0}'.format(mediadir))
+                adb.push(data[0][2], mediadir)
 
     start = time.time()
     for i in module:

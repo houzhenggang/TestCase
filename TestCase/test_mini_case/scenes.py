@@ -13,6 +13,9 @@ import time
 
 import monkey
 
+from Tkinter import *
+from tkMessageBox import *
+
 class Executor(object):
 
     def __init__(self, adb, workout):
@@ -24,12 +27,11 @@ class Executor(object):
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         if len(lines) > 0:
-            select = raw_input('Want to continue the last fluency test? [N] ')
-            print('')
-            if select == 'Y' or select == 'y':
-                self.restart = True
-                return
-        self.restart = False
+            root = Tk()
+            self.retry = askyesno('流畅性测试', '是否继续上一次的测试', default=NO)
+            root.destroy()
+        else:
+            self.retry = False
 
     def execute(self):
         self.workout = os.path.join(self.workout, 'scenes')
@@ -42,7 +44,7 @@ class Executor(object):
         self.adb.kit.trackframetime()
 
         tmppath = '/data/local/tmp/scenes'
-        if not self.restart:
+        if not self.retry:
             workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))

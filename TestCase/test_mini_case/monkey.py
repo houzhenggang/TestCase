@@ -1,6 +1,7 @@
 # -*- coding:UTF-8 -*-
 
 import codecs
+import copy
 import csv
 import os
 import re
@@ -9,6 +10,9 @@ import subprocess
 import sys
 import threading
 import time
+
+from Tkinter import *
+from tkMessageBox import *
 
 def monkey(outdir, packages):
     data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
@@ -233,67 +237,91 @@ class Executor(object):
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         lines = [line.split() for line in lines]
+        self.restart = False
         if len(lines) > 0:
             self.single = ['-', 'monkey.txt'] not in lines
-            select = raw_input('Want to continue the last {0} test? [N] '.format('single monkey' if self.single else 'monkey'))
-            print('')
-            if select == 'Y' or select == 'y':
-                self.restart = True
-                return
-        self.restart = False
+            root = Tk()
+            self.restart = askyesno('单包Monkey测试' if self.single else '整机Monkey测试', '是否继续上一次的测试', default=NO)
+            root.destroy()
 
-        print('Monkey type choices are:')
-        print('     1. monkey')
-        print('     2. single')
-        try:
-            self.single = input('\nWhich would you like? [2] ') == 2
-        except SyntaxError:
-            self.single = True
-        except NameError:
-            sys.exit(2)
-        print('')
+        if self.restart:
+            return
 
-        print('Parameters for monkey:')
+        root = Tk()
+        root.title('Monkey测试')
+        frame = LabelFrame(root, text='请选择Monkey测试类型')
+        self.single = True
+        typevar = BooleanVar()
+        typevar.set(self.single)
+        def seltype():
+            self.single = typevar.get()
+            self.count = 200000 if self.single else 1000000
+            countvar.set(self.count)
+        Radiobutton(frame, text='整机Monkey测试', variable=typevar, value=False, command=seltype).pack(anchor=W)
+        Radiobutton(frame, text='单包Monkey测试', variable=typevar, value=True, command=seltype).pack(anchor=W)
+        frame.pack(anchor=W)
+
+        frame = LabelFrame(root, text='请输入Monkey测试参数')
+        Label(frame, text='随机种子数').grid(row=0, column=0, sticky=W)
         self.seed = 10
-        try:
-            self.seed = input('Monkey seed? [{0}] '.format(self.seed))
-        except SyntaxError:
-            pass
-        except NameError:
-            pass
+        seedvar = StringVar()
+        seedvar.set(self.seed)
+        def selseed(event):
+            if not seedvar.get().isdigit():
+                seedvar.set(self.seed)
+            else:
+                self.seed = int(seedvar.get())
+        seedval = Entry(frame, textvariable=seedvar)
+        seedval.grid(row=0, column=1, sticky=W)
+        seedval.bind('<KeyRelease>', selseed)
+        Label(frame, text='事件间隔时间（毫秒）').grid(row=1, column=0, sticky=W)
         self.throttle = 50
-        try:
-            self.throttle = input('Monkey throttle in milliseconds? [{0}] '.format(self.throttle))
-        except SyntaxError:
-            pass
-        except NameError:
-            pass
+        throttlevar = StringVar()
+        throttlevar.set(self.throttle)
+        def selthrottle(event):
+            if not throttlevar.get().isdigit():
+                throttlevar.set(self.throttle)
+            else:
+                self.throttle = int(throttlevar.get())
+        throttleval = Entry(frame, textvariable=throttlevar)
+        throttleval.grid(row=1, column=1, sticky=W)
+        throttleval.bind('<KeyRelease>', selthrottle)
+        Label(frame, text='事件次数').grid(row=2, column=0, sticky=W)
         self.count = 200000 if self.single else 1000000
-        try:
-            self.count = input('Monkey count? [{0}] '.format(self.count))
-        except SyntaxError:
-            pass
-        except NameError:
-            pass
-        print('')
+        countvar = StringVar()
+        countvar.set(self.count)
+        def selcount(event):
+            if not countvar.get().isdigit():
+                countvar.set(self.count)
+            else:
+                self.count = int(countvar.get())
+        countval = Entry(frame, textvariable=countvar)
+        countval.grid(row=2, column=1, sticky=W)
+        countval.bind('<KeyRelease>', selcount)
+        frame.pack(anchor=W)
 
-        if self.single:
-            selected = []
-            print('Monkey package choices are:')
-            pkgkeys = self.usedpkgs.keys()
-            for i in range(len(pkgkeys)):
-                print('    {0:>2}. {1}'.format(i + 1, pkgkeys[i]))
-            options = ','.join([str(x) for x in range(1, len(pkgkeys) + 1)])
-            selects = raw_input('\nWhich would you like? [{0}] '.format(options)).split(',')
-            for select in selects:
-                try:
-                    index = int(select.strip()) - 1
-                    index = divmod(index, len(pkgkeys))[1]
-                    selected.append((pkgkeys[index], self.usedpkgs[pkgkeys[index]]))
-                except ValueError:
-                    continue
-            self.usedpkgs = dict(selected) if selected else self.usedpkgs
-            print('')
+        frame = LabelFrame(root, text='请选择要测试的包')
+        tmppkgs = copy.copy(self.usedpkgs)
+        keys = tmppkgs.keys()
+        def selpkg(event):
+            var = getattr(event.widget, 'var')
+            pkg = getattr(event.widget, 'pkg')
+            if var.get():
+                self.usedpkgs[pkg] = tmppkgs.get(pkg)
+            else:
+                self.usedpkgs.pop(pkg, 'None')
+        for i in range(len(keys)):
+            dm = divmod(i, 2)
+            pkgvar = IntVar()
+            pkgvar.set(1)
+            cb = Checkbutton(frame, variable=pkgvar, text=keys[i])
+            cb.grid(row=dm[0], column=dm[1], sticky=NW)
+            cb.bind('<Leave>', selpkg)
+            setattr(cb, 'var', pkgvar)
+            setattr(cb, 'pkg', keys[i])
+        frame.pack(anchor=W)
+        Button(root, text='确定', command=root.destroy).pack(anchor=E)
+        root.mainloop()
 
     def execute(self):
         self.workout = os.path.join(self.workout, 'monkey')

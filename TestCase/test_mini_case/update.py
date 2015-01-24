@@ -4,6 +4,8 @@ import os
 import sys
 import time
 
+from Tkinter import *
+
 class Executor(object):
 
     def __init__(self, adb, workout):
@@ -20,27 +22,26 @@ class Executor(object):
         configs.close()
 
         sections = os.listdir(rootdir)
-        print('Department section choices are:')
-        for i in range(len(sections)):
-            print('    {0:>2}. {1}'.format(i + 1, sections[i]))
-        try:
-            select = input('\nWhich would you like? ') - 1
-            select = divmod(select, len(sections))[1]
-        except SyntaxError:
-            sys.exit(2)
-        except NameError:
-            sys.exit(2)
-        print('')
+        if sections:
+            root = Tk()
+            root.title('系统升级')
+            frame = LabelFrame(root, text='请选择部门科室')
+            var = IntVar()
+            for i in range(len(sections)):
+                Radiobutton(frame, text=sections[i], variable=var, value=i).pack(anchor=W)
+            frame.pack(anchor=W)
+            Button(root, text='确定', command=root.destroy).pack(anchor=E)
+            root.mainloop()
 
-        builddir = os.path.join(rootdir, sections[select])
-        builddir = os.path.join(builddir, self.adb.getprop('ro.product.model'))
+            builddir = os.path.join(rootdir, sections[var.get()])
+            builddir = os.path.join(builddir, self.adb.getprop('ro.product.model'))
 
-        if os.path.exists(builddir):
-            filelist = os.listdir(builddir)
+            if os.path.exists(builddir):
+                filelist = os.listdir(builddir)
 
-            if len(filelist) > 0:
-                self.buildfile = max(filelist, key=os.path.basename)
-                self.buildfile = os.path.join(builddir, self.buildfile)
+                if len(filelist) > 0:
+                    self.buildfile = max(filelist, key=os.path.basename)
+                    self.buildfile = os.path.join(builddir, self.buildfile)
 
     def execute(self):
         if self.buildfile:

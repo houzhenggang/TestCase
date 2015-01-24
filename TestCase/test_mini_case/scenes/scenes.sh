@@ -64,6 +64,8 @@ elif [ "${model}" == "MI 3W" ] ;then
     execute 'PressMenuTest' 'com.miui.home' 'cn.mi.test.PressMenuTest'
 else
     execute 'NativeListViewTest' 'com.example.android.apis' 'cn.nubia.test.NativeListViewTest'
+    execute 'DialTest' 'cn.nubia.contacts' 'cn.nubia.test.DialTest'
+    execute 'MusicTest' 'cn.nubia.music.preset' 'cn.nubia.test.MusicTest'
     execute 'ContactTest' 'com.android.contacts' 'cn.nubia.test.ContactTest'
     execute 'DeveloperTest' 'com.android.settings' 'cn.nubia.test.DeveloperTest'
     execute 'MultiTaskTest' 'com.android.systemui' 'cn.nubia.test.MultiTaskTest'
