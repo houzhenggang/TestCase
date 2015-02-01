@@ -21,7 +21,7 @@ import stress
 import update
 import uptime
 import screenshot
-import chart.run as runner
+import chart.run as charter
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -103,7 +103,7 @@ class SetupExecuteThread(QThread):
         end = time.time()
 
         self.statusChange.emit(u'正在生成报告')
-        runner.run(workout)
+        charter.run(workout)
 
         self.statusChange.emit(u'完成')
         self.adb.kit.destroy()
@@ -139,12 +139,18 @@ class SelectTestDialog(QDialog):
         self.okButton = QPushButton(u'确定')
         self.okButton.clicked.connect(self.buttonClicked)
         self.okButton.setDefault(True)
+        self.selallButton = QPushButton(u'全选')
+        self.selallButton.clicked.connect(self.buttonClicked)
+        self.disallButton = QPushButton(u'反选')
+        self.disallButton.clicked.connect(self.buttonClicked)
         self.upButton = QPushButton(u'上移')
         self.upButton.clicked.connect(self.buttonClicked)
         self.downButton = QPushButton(u'下移')
         self.downButton.clicked.connect(self.buttonClicked)
         buttonBox = QDialogButtonBox(Qt.Vertical)
         buttonBox.addButton(self.okButton, QDialogButtonBox.ActionRole)
+        buttonBox.addButton(self.selallButton, QDialogButtonBox.ActionRole)
+        buttonBox.addButton(self.disallButton, QDialogButtonBox.ActionRole)
         buttonBox.addButton(self.upButton, QDialogButtonBox.ActionRole)
         buttonBox.addButton(self.downButton, QDialogButtonBox.ActionRole)
 
@@ -164,6 +170,12 @@ class SelectTestDialog(QDialog):
                 if item.checkState() == Qt.Checked:
                     self.selected.append(item.data(1).toPyObject())
             self.accept()
+        elif sender == self.selallButton:
+            for i in range(self.list.count()):
+                self.list.item(i).setCheckState(Qt.Checked)
+        elif sender == self.disallButton:
+            for i in range(self.list.count()):
+                self.list.item(i).setCheckState(Qt.Unchecked)
         elif sender == self.upButton:
             row = self.list.currentRow()
             item = self.list.takeItem(row)

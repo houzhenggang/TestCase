@@ -166,8 +166,8 @@ class Executor(object):
                     break
                 time.sleep(30)
 
-            # import user data again
-            importdata(self.adb, self.datatype)
+            if self.datatype:
+                importdata(self.adb, self.datatype)
             self.adb.reboot(30)
             self.adb.kit.disablekeyguard()
 
