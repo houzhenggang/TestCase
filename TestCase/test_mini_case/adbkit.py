@@ -1,4 +1,4 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import os
 import re
@@ -7,14 +7,13 @@ import sys
 import threading
 import time
 
-import compat
+from common import Apk, workdir
 
-workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-adbfile = os.path.join(workdir, 'adb.exe')
+adbfile = os.path.join(workdir, 'adb')
 
 def devices():
     results = []
-    p = subprocess.Popen('{0} devices'.format(adbfile), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen('\"{0}\" devices'.format(adbfile), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         m = re.search('^(\S+)\s+device', line)
         if m:
@@ -25,16 +24,16 @@ class Adb(object):
 
     def __init__(self, serialno):
         if serialno:
-            self.prefix = '{0} -s {1}'.format(adbfile, serialno)
+            self.prefix = '\"{0}\" -s {1}'.format(adbfile, serialno)
         else:
-            self.prefix = adbfile
+            self.prefix = '\"{0}\"'.format(adbfile)
         self.kit = Kit(self, os.path.join(workdir, 'automator.jar'), os.path.join(workdir, 'TestKit.apk'))
 
     def __adbopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
         return subprocess.Popen('{0} {1}'.format(self.prefix, cmd), shell=shell, stdout=stdout, stderr=stderr)
 
     def __shellopen(self, cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT):
-        return self.__adbopen('shell {0}'.format(cmd), shell=shell, stdout=stdout, stderr=stderr)
+        return self.__adbopen('shell {0}'.format(cmd), shell, stdout, stderr)
 
     def __adbreadline(self, cmd):
         return self.__adbopen(cmd).stdout.readline().strip()
@@ -192,7 +191,7 @@ class App(object):
     def __init__(self, adb, apk):
         self.adb = adb
         self.apk = apk
-        self.package = compat.Apk(self.apk).package
+        self.package = Apk(self.apk).package
         self.install()
 
     def __installed(self):

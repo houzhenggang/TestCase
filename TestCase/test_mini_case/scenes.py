@@ -1,4 +1,4 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import codecs
 import csv
@@ -16,6 +16,8 @@ import monkey
 from Tkinter import *
 from tkMessageBox import *
 
+from common import workdir
+
 class Executor(object):
 
     def __init__(self, adb, workout):
@@ -28,7 +30,7 @@ class Executor(object):
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         if len(lines) > 0:
             root = Tk()
-            self.retry = askyesno('Á÷³©ĞÔ²âÊÔ', 'ÊÇ·ñ¼ÌĞøÉÏÒ»´ÎµÄ²âÊÔ', default=NO)
+            self.retry = askyesno('æµç•…æ€§æµ‹è¯•', 'æ˜¯å¦ç»§ç»­ä¸Šä¸€æ¬¡çš„æµ‹è¯•', default=NO)
             root.destroy()
         else:
             self.retry = False
@@ -45,7 +47,6 @@ class Executor(object):
 
         tmppath = '/data/local/tmp/scenes'
         if not self.retry:
-            workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'scenes'), tmppath)

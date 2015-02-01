@@ -1,4 +1,4 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import codecs
 import csv
@@ -11,36 +11,7 @@ import sys
 import threading
 import time
 
-workdir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'compat')
-
-class Apk(object):
-
-    def __init__(self, apkfile):
-        self.package = ''
-        self.version = ''
-        self.label = ''
-        self.launcher = ''
-
-        p = subprocess.Popen('{0} d badging \"{1}\"'.format(os.path.join(workdir, 'aapt.exe'), apkfile), stdout=subprocess.PIPE)
-        for line in p.stdout.readlines():
-            if line.startswith('package:'):
-                m = re.search('name=\'(.*)\' versionCode=\'.*\' versionName=\'(.*)\'', line)
-                if m:
-                    g = m.groups()
-                    self.package = g[0]
-                    self.version = g[1]
-            elif line.startswith('application-label:'):
-                m = re.search('application-label:\'(.*)\'', line)
-                if m:
-                    self.label = m.groups()[0]
-            elif line.startswith('application-label-zh_CN:'):
-                m = re.search('application-label-zh_CN:\'(.*)\'', line)
-                if m:
-                    self.label = m.groups()[0]
-            elif line.startswith('launchable-activity:'):
-                m = re.search('name=\'(.*)\' +label=\'(.*)\'', line)
-                if m:
-                    self.launcher = m.groups()[0]
+from common import Apk, workdir
 
 class Executor(object):
 
@@ -104,7 +75,7 @@ class Executor(object):
     def execute(self):
         self.adb.reboot(30)
         self.adb.kit.disablekeyguard()
-        remotedir = open(os.path.join(workdir, 'config.txt'), 'r').readlines()[1].strip()
+        remotedir = open(os.path.join(workdir, 'compat', 'config.txt'), 'r').readlines()[1].strip()
 
         pattern = re.compile('[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+(\d+\.\d+)(\S+)[ ]+\d+')
         m1 = pattern.search(self.adb.shellreadlines('df data')[-1])
@@ -122,7 +93,7 @@ class Executor(object):
 
         for filename in glob.glob(os.path.join(unicode(remotedir, 'utf-8'), '*.apk')):
             apkfile = filename.encode('gb2312')
-            apk = Apk(apkfile)
+            apk = common.Apk(apkfile)
             if apk.package:
                 self.adb.push(apkfile, '/data/local/tmp/tmp.apk')
                 r1 = self.install(apk.package)
@@ -135,10 +106,3 @@ class Executor(object):
                             r2[0], r2[1], r2[2], r1[3], r1[4], r1[5], r2[3], r2[4], r2[5]])
                 report.flush()
         report.close()
-
-if __name__ == '__main__':
-    apk = Apk('TestKit.apk')
-    print(apk.package)
-    print(apk.version)
-    print(apk.label)
-    print(apk.launcher)

@@ -1,4 +1,4 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import codecs
 import copy
@@ -13,6 +13,8 @@ import time
 
 from Tkinter import *
 from tkMessageBox import *
+
+from common import workdir
 
 def monkey(outdir, packages):
     data = {'seed': 0, 'count': 0, 'event': 0, 'time': 0, 'crash': 0, 'anr': 0}
@@ -237,14 +239,14 @@ class Executor(object):
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         lines = [line.split() for line in lines]
-        self.restart = False
+        self.retry = False
         if len(lines) > 0:
             self.single = ['-', 'monkey.txt'] not in lines
             root = Tk()
-            self.restart = askyesno('单包Monkey测试' if self.single else '整机Monkey测试', '是否继续上一次的测试', default=NO)
+            self.retry = askyesno('单包Monkey测试' if self.single else '整机Monkey测试', '是否继续上一次的测试', default=NO)
             root.destroy()
 
-        if self.restart:
+        if self.retry:
             return
 
         root = Tk()
@@ -329,15 +331,15 @@ class Executor(object):
         if not os.path.exists(self.workout):
             os.mkdir(self.workout)
 
-        if self.restart and self.single or not self.restart:
-            if not self.restart:
+        if self.retry and self.single or not self.retry:
+            if not self.retry:
                 self.adb.reboot(30)
             self.adb.kit.disablekeyguard()
             self.adb.kit.trackframetime()
 
         tmppath = '/data/local/tmp/monkey'
 
-        if self.restart:
+        if self.retry:
             self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
         else:
             pkgpath = os.path.join(self.workout, 'packages.txt')
@@ -345,7 +347,6 @@ class Executor(object):
             pkgfile.write('{0}\n'.format('\n'.join(self.usedpkgs.keys())))
             pkgfile.close()
 
-            workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'monkey'), tmppath)

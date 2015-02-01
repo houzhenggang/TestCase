@@ -1,4 +1,4 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import codecs
 import csv
@@ -7,10 +7,12 @@ import sys
 import threading
 import time
 
+import adbkit
+
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 from Tkinter import *
 
-import adbkit
+from common import workdir
 
 class StressMonitorThread(threading.Thread):
 
@@ -36,10 +38,9 @@ class Executor(object):
     def __init__(self, adb, workout):
         self.adb = adb
         self.workout = workout
-        self.workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
     def setup(self):
-        config = open(os.path.join(self.workdir, 'stress', 'config.xml'), 'r')
+        config = open(os.path.join(workdir, 'stress', 'config.xml'), 'r')
         tree = ElementTree(file=config)
         items = tree.findall('item')
 
@@ -103,7 +104,7 @@ class Executor(object):
 
         if self.extras:
             tags = self.adb.getprop('ro.build.tags')
-            self.adb.install(os.path.join(self.workdir, 'stress', 'StressTest_{0}.apk'.format(tags)))
+            self.adb.install(os.path.join(workdir, 'stress', 'StressTest_{0}.apk'.format(tags)))
             t = StressMonitorThread(self.adb)
             t.start()
             lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)), 'stress.csv', 30)
@@ -136,7 +137,7 @@ class Executor(object):
     def usbwakeup(self, **args):
         loop = int(args['loop'])
         success = failure = 0
-        uia = adbkit.Uia(self.adb, os.path.join(self.workdir, 'stress', 'WakeUpStressTest.jar'))
+        uia = adbkit.Uia(self.adb, os.path.join(workdir, 'stress', 'WakeUpStressTest.jar'))
         for line in uia.runtest('cn.nubia.WakeUpTest', extras=['-e Cycle {0}'.format(loop)]):
             if line.startswith('RESULT='):
                 result = eval(line.split('=')[-1])

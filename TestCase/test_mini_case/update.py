@@ -1,10 +1,12 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import os
 import sys
 import time
 
 from Tkinter import *
+
+from common import workdir
 
 class Executor(object):
 
@@ -14,23 +16,20 @@ class Executor(object):
         self.buildfile = None
 
     def setup(self):
-        workdir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])))
-        workdir = os.path.join(workdir, 'update')
-
-        configs = open(os.path.join(workdir, 'config.txt'), 'r')
+        configs = open(os.path.join(workdir, 'update', 'config.txt'), 'r')
         rootdir = configs.readlines()[1].strip()
         configs.close()
 
         sections = os.listdir(rootdir)
         if sections:
             root = Tk()
-            root.title('系统升级')
-            frame = LabelFrame(root, text='请选择部门科室')
+            root.title('绯荤粺鍗囩骇')
+            frame = LabelFrame(root, text='璇烽�夋嫨閮ㄩ棬绉戝')
             var = IntVar()
             for i in range(len(sections)):
                 Radiobutton(frame, text=sections[i], variable=var, value=i).pack(anchor=W)
             frame.pack(anchor=W)
-            Button(root, text='确定', command=root.destroy).pack(anchor=E)
+            Button(root, text='纭畾', command=root.destroy).pack(anchor=E)
             root.mainloop()
 
             builddir = os.path.join(rootdir, sections[var.get()])

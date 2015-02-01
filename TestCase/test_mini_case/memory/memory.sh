@@ -4,7 +4,7 @@ workdir=/data/local/tmp/memory
 workout=${workdir}/out
 
 sleep 5
-dumpsys meminfo > ${workout}/meminfo-1.txt
+dumpsys meminfo > ${workout}/meminfo-2.txt
 
 while read line
 do
@@ -35,4 +35,4 @@ else
     uiautomator runtest automator.jar -c com.android.systemui.MultiTaskTestCase\#testRecycle
 fi
 
-dumpsys meminfo > ${workout}/meminfo-2.txt
+dumpsys meminfo > ${workout}/meminfo-3.txt

@@ -1,4 +1,4 @@
-# -*- coding:UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import codecs
 import csv
@@ -14,8 +14,11 @@ import monkey
 from Tkinter import *
 from tkMessageBox import *
 
+from common import workdir, importdata
+
 def meminfo(outdir, name, outname):
     start = False
+    total = used = 0
     usrprocs = []
     sysprocs = []
     outpath = os.path.join(outdir, name)
@@ -48,7 +51,7 @@ def meminfo(outdir, name, outname):
                 else:
                     sysprocs.append(g)
     output.close()
-    os.unlink(outpath)
+    os.rename(outpath, os.path.join(outdir, unicode(outname, 'utf-8').encode('gb2312') + '.txt'))
 
     sorted(sysprocs)
     sorted(usrprocs)
@@ -100,11 +103,12 @@ def stat(outdir):
 
 class Executor(object):
 
-    def __init__(self, adb, workout, packages):
+    def __init__(self, adb, workout, packages, datatype):
         self.adb = adb
         self.workout = workout
         self.packages = packages
         self.usedpkgs = dict([x for x in packages.items() if x[1].get('activities')])
+        self.datatype = datatype
 
     def setup(self):
         outpath = '/data/local/tmp/memory/out'
@@ -142,7 +146,6 @@ class Executor(object):
 
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
-            workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
             self.adb.push(os.path.join(workdir, 'memory'), tmppath)
             self.adb.shell('chmod 755 {0}/*.sh'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'busybox'), tmppath)
@@ -150,7 +153,25 @@ class Executor(object):
             self.adb.push(pkgpath, tmppath)
             os.remove(pkgpath)
 
-            self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
+            self.adb.shellreadlines('sh {0}/main.sh reset'.format(tmppath))
+
+            while True:
+                for i in range(3):
+                    if self.adb.ismonkey():
+                        finish = False
+                    else:
+                        finish = True
+                        time.sleep(15)
+                if finish:
+                    break
+                time.sleep(30)
+
+            # import user data again
+            importdata(self.adb, self.datatype)
+            self.adb.reboot(30)
+            self.adb.kit.disablekeyguard()
+
+            self.adb.shellreadlines('sh {0}/main.sh memory'.format(tmppath))
 
             while True:
                 for i in range(3):
@@ -173,4 +194,6 @@ class Executor(object):
                 elif name == 'meminfo-1.txt':
                     meminfo(dirpath, name, '开机启动进程及内存占用')
                 elif name == 'meminfo-2.txt':
+                    meminfo(dirpath, name, '正常开机进程及内存占用')
+                elif name == 'meminfo-3.txt':
                     meminfo(dirpath, name, '后台常驻进程及内存占用')

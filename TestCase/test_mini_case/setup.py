@@ -15,6 +15,9 @@ if len(sys.argv) == 1:
     sys.exit(2)
 
 if sys.argv[1] == 'py2exe':
+    with open('v.txt', 'r') as f:
+        version = f.readline().strip()
+
     options = {
         'py2exe': {
             'includes': [
@@ -22,7 +25,9 @@ if sys.argv[1] == 'py2exe':
                 'matplotlib.figure',
                 'pylab',
                 'numpy',
-                'matplotlib.backends.backend_tkagg'
+                'matplotlib.backends.backend_tkagg',
+                'PIL.Image',
+                'sip'
             ],
             'excludes': [
                 '_gtkagg',
@@ -32,12 +37,17 @@ if sys.argv[1] == 'py2exe':
                 '_cocoaagg',
                 '_fltkagg',
                 '_gtk',
-                '_gtkcairo'
+                '_gtkcairo',
+                #'tcl',
+                #'Tkconstants',
+                #'Tkinter'
             ],
             'dll_excludes': [
                 'MSVCP90.dll',
                 'libgdk-win32-2.0-0.dll',
-                'libgobject-2.0-0.dll'
+                'libgobject-2.0-0.dll',
+                #'tcl85.dll',
+                #'tk85.dll'
             ]
         }
     }
@@ -50,7 +60,9 @@ if sys.argv[1] == 'py2exe':
         'automator.jar',
         'adb.exe',
         'AdbWinApi.dll',
-        'AdbWinUsbApi.dll'
+        'AdbWinUsbApi.dll',
+        'logo.png',
+        'v.txt'
     ]))
     data_files.append(('chart', [
         join('chart', 'performance.xls')
@@ -61,6 +73,7 @@ if sys.argv[1] == 'py2exe':
     data_files.append(('scenes', glob(join('scenes', '*'))))
     data_files.append(('stress', glob(join('stress', '*'))))
     data_files.append(('update', glob(join('update', '*'))))
+    data_files.append(('screenshot',glob(join('screenshot', '*'))))
 
     # add matplotlib data files
     matplotlibdir = dirname(matplotlib.__file__)
@@ -83,28 +96,34 @@ if sys.argv[1] == 'py2exe':
 
     setup(
         name='testplat',
-        version='1.0.0.1',
+        version=version,
         console=[{
             'script': 'start.py',
+            'icon_resources': [(1, 'logo.ico')]
+        }, {
+            'script': 'upgrade.py',
             'icon_resources': [(1, 'logo.ico')]
         }],
         options=options,
         data_files=data_files
     )
 
-    # rename file
+    # rename files
     shutil.move(join('dist', 'start.exe'), join('dist', 'TestPlatform.exe'))
+    shutil.move(join('dist', 'upgrade.exe'), join('dist', 'PlatformUpdate.exe'))
 
 if sys.argv[1] in ['dist', 'publish']:
     f = zipfile.ZipFile('dist.zip', 'w', zipfile.ZIP_DEFLATED)
     for dirpath, dirnames, names in os.walk('dist'):
-        for name in names:
-            f.write(join(dirpath, name))
+        if not dirpath == join('dist', 'out'):
+            for name in names:
+                zippath = os.sep.join(dirpath.split(os.sep)[1:])
+                f.write(join(dirpath, name), join(zippath, name))
     f.close()
 
 if sys.argv[1] in ['publish']:
     f = open('config.txt', 'r')
-    remote = unicode(f.readlines()[3], 'utf-8').encode('gb2312')
+    remote = unicode(f.readlines()[3].strip(), 'utf-8').encode('gb2312')
     shutil.copy('dist.zip', remote)
     shutil.copy('sync.bat', remote)
     f.close()
