@@ -69,7 +69,6 @@ else
     execute 'ContactTest' 'com.android.contacts' 'cn.nubia.test.ContactTest'
     execute 'DeveloperTest' 'com.android.settings' 'cn.nubia.test.DeveloperTest'
     execute 'MultiTaskTest' 'com.android.systemui' 'cn.nubia.test.MultiTaskTest'
-    execute 'NoteScaleTest' 'com.android.contacts' 'cn.nubia.test.NoteScaleTest'
     execute 'LauncherTest' 'cn.nubia.launcher' 'cn.nubia.test.LauncherTest'
     execute 'PressMenuTest' 'cn.nubia.launcher' 'cn.nubia.test.PressMenuTest'
 fi

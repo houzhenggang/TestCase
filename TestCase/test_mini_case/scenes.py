@@ -13,8 +13,7 @@ import time
 
 import monkey
 
-from Tkinter import *
-from tkMessageBox import *
+from PyQt4.QtGui import *
 
 from common import workdir
 
@@ -24,14 +23,16 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
-    def setup(self):
+    def title(self):
+        return u'流畅性测试'
+
+    def setup(self, win):
         outpath = '/data/local/tmp/scenes/out'
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         if len(lines) > 0:
-            root = Tk()
-            self.retry = askyesno('流畅性测试', '是否继续上一次的测试', default=NO)
-            root.destroy()
+            self.retry = QMessageBox.question(win, u'流畅性测试', u'是否继续上一次的流畅性测试',
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
         else:
             self.retry = False
 

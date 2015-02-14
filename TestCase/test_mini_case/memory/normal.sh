@@ -3,4 +3,4 @@
 workdir=/data/local/tmp/memory
 workout=${workdir}/out
 
-dumpsys meminfo > ${workout}/meminfo-1.txt
+dumpsys meminfo > ${workout}/meminfo-2.txt

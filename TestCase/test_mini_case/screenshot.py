@@ -13,6 +13,8 @@ import time
 import startcompare
 import adbkit
 
+from PyQt4.QtGui import *
+
 workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 class Executor(object):
@@ -21,17 +23,18 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
-    def setup(self):
+    def title(self):
+        return u'截图比较测试'
+
+    def setup(self, win):
         outpath = '/data/local/tmp/screenshot/out'
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         if len(lines) > 0:
-            select = raw_input('Want to continue the last screenshot test? [N] ')
-            print('')
-            if select == 'Y' or select == 'y':
-                self.restart = True
-                return
-        self.restart = False
+            self.restart = QMessageBox.question(win, u'截图比较测试', u'是否继续上一次的截图比较测试',
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
+        else:
+            self.restart = False
 
     def execute(self):
         shutil.rmtree(self.workout, ignore_errors=True)

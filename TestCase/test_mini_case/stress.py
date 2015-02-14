@@ -10,9 +10,74 @@ import time
 import adbkit
 
 from xml.etree.ElementTree import ElementTree, Element, SubElement
-from Tkinter import *
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
 from common import workdir
+
+class StressSelectDialog(QDialog):
+
+    def __init__(self, items, parent=None):
+        super(StressSelectDialog, self).__init__(parent)
+        self.items = items
+        self.initUI()
+
+    def initUI(self):
+        tree = QTreeWidget()
+        tree.setColumnCount(2)
+        tree.setHeaderLabels([u'测试项', u'描述'])
+        tree.setColumnWidth(0, 180)
+        tree.itemClicked.connect(self.paramClicked)
+        tree.itemChanged.connect(self.paramChanged)
+
+        for i in range(len(self.items)):
+            item = QTreeWidgetItem(tree)
+            item.setData(0, 1, QVariant(i))
+            item.setCheckState(0, Qt.Unchecked)
+            item.setText(0, self.items[i].attrib['name'])
+            item.setText(1, self.items[i].find('desc').text)
+
+            params = self.items[i].findall('param')
+            for j in range(len(params)):
+                param = QTreeWidgetItem(item)
+                param.setData(0, 1, QVariant(j))
+                param.setText(0, params[j].attrib['name'])
+                param.setText(1, params[j].text)
+
+            tree.addTopLevelItem(item)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        hbox = QVBoxLayout()
+        hbox.addWidget(tree)
+        hbox.addWidget(buttonBox)
+
+        self.setLayout(hbox)
+        self.resize(500, 300)
+        self.setWindowTitle(u'选择压力测试项')
+
+    def paramClicked(self, param, column):
+        if column == 1 and not param.childCount():
+            param.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable)
+        else:
+            param.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+
+    def paramChanged(self, param, column):
+        if column == 0 and param.childCount():
+            self.items[param.data(0, 1).toPyObject()].attrib['selected'] = param.checkState(column) == Qt.Checked
+        elif column == 1 and not param.childCount():
+            if param.parent():
+                text = unicode(param.text(column))
+                p = self.items[param.parent().data(0, 1).toPyObject()].findall('param')[param.data(0, 1).toPyObject()]
+                if p.attrib['type'] == 'int':
+                    if text.isdigit():
+                        p.text = text
+                    else:
+                        param.setText(1, p.text)
+                else:
+                    p.text = text
 
 class StressMonitorThread(threading.Thread):
 
@@ -39,54 +104,15 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
-    def setup(self):
-        config = open(os.path.join(workdir, 'stress', 'config.xml'), 'r')
-        tree = ElementTree(file=config)
-        items = tree.findall('item')
+    def title(self):
+        return u'压力测试'
 
-        def callcheck(event):
-            getattr(event.widget, 'item').attrib['selected'] = getattr(event.widget, 'var').get()
+    def setup(self, win):
+        with open(os.path.join(workdir, 'stress', 'config.xml'), 'r') as f:
+            items = ElementTree(file=f).findall('item')
 
-        def callinput(event):
-            var = getattr(event.widget, 'var')
-            param = getattr(event.widget, 'param')
-            if param.attrib['type'] == 'int' and not var.get().isdigit():
-                var.set(param.text)
-            else:
-                param.text = var.get()
-
-        root = Tk()
-        root.title('压力测试')
-        left = Frame(root)
-        left.grid(row=0, column=0, sticky=NW)
-        right = Frame(root)
-        right.grid(row=0, column=1, sticky=NW)
-        button = Button(root, text='确定', command=root.destroy)
-        button.grid(row=1, column=1, sticky=E)
-
-        for i in range(len(items)):
-            dm = divmod(i, 2)
-            side = left if dm[1] == 0 else right
-            c = IntVar()
-            cb = Checkbutton(side, variable=c, text=items[i].attrib['name'])
-            cb.grid(row=dm[0], column=0, sticky=NW)
-            cb.bind('<Leave>', callcheck)
-            setattr(cb, 'var', c)
-            setattr(cb, 'item', items[i])
-            panel = Frame(side)
-            params = items[i].findall('param')
-            for j in range(len(params)):
-                Label(panel, text=params[j].attrib['name']).grid(row=j, column=0, sticky=W)
-                v = StringVar()
-                v.set(params[j].text)
-                en = Entry(panel, textvariable=v)
-                en.grid(row=j, column=1, sticky=W)
-                en.bind('<KeyRelease>', callinput)
-                setattr(en, 'var', v)
-                setattr(en, 'param', params[j])
-            panel.grid(row=dm[0], column=1, sticky=NW)
-            Label(side, text=items[i].find('desc').text).grid(row=dm[0], column=2, sticky=NW)
-        root.mainloop()
+        dialog = StressSelectDialog(items, win)
+        dialog.exec_()
 
         self.extras = []
         self.pyfunc = []

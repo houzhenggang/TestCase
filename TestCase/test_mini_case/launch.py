@@ -14,7 +14,10 @@ class Executor(object):
         self.workout = workout
         self.packages = packages
 
-    def setup(self):
+    def title(self):
+        return u'应用启动时间测试'
+
+    def setup(self, win):
         self.count = 11
 
     def startactivity(self, package, activity, cleartask=True):

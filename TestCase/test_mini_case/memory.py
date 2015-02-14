@@ -2,6 +2,7 @@
 
 import codecs
 import csv
+import copy
 import os
 import re
 import shutil
@@ -11,8 +12,8 @@ import time
 
 import monkey
 
-from Tkinter import *
-from tkMessageBox import *
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 
 from common import workdir, importdata
 
@@ -101,6 +102,82 @@ def stat(outdir):
         writer.writerow([os.path.basename(outdir), 0, 0, 0, crashs, anrs])
     report.close()
 
+class SelectItemDialog(QDialog):
+
+    def __init__(self, executor, parent=None):
+        super(SelectItemDialog, self).__init__(parent)
+        self.executor = executor
+        self.initUI()
+
+    def initUI(self):
+        self.item1 = QCheckBox(u'开机启动内存')
+        self.item1.setChecked(self.executor.sel1)
+        self.item1.stateChanged[int].connect(self.setItemChecked)
+        self.item2 = QCheckBox(u'正常开机内存')
+        self.item2.setChecked(self.executor.sel2)
+        self.item2.stateChanged[int].connect(self.setItemChecked)
+        self.item3 = QCheckBox(u'后台常驻内存')
+        self.item3.setChecked(self.executor.sel3)
+        self.item3.stateChanged[int].connect(self.setItemChecked)
+        self.item4 = QCheckBox(u'应用内存')
+        self.item4.setChecked(self.executor.sel4)
+        self.item4.stateChanged[int].connect(self.setItemChecked)
+        itemLayout = QVBoxLayout()
+        itemLayout.addWidget(self.item1)
+        itemLayout.addWidget(self.item2)
+        itemLayout.addWidget(self.item3)
+        itemLayout.addWidget(self.item4)
+        itemGroup = QGroupBox(u'内存测试项')
+        itemGroup.setLayout(itemLayout)
+        list = QListWidget(self)
+        list.itemChanged.connect(self.itemChanged)
+        for key in self.executor.usedpkgs.keys():
+            item = QListWidgetItem(key)
+            item.setCheckState(Qt.Checked)
+            item.setData(1, QVariant(key))
+            list.addItem(item)
+        list.setCurrentRow(0)
+        listLayout = QVBoxLayout()
+        listLayout.addWidget(list)
+        listGroup = QGroupBox(u'应用内存可选包名')
+        listGroup.setLayout(listLayout)
+
+        itemLayout = QHBoxLayout()
+        itemLayout.addWidget(itemGroup)
+        itemLayout.addWidget(listGroup)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        mainLayout = QVBoxLayout()
+        mainLayout.addLayout(itemLayout)
+        mainLayout.addWidget(buttonBox)
+
+        self.setLayout(mainLayout)
+        self.resize(450, 200)
+        self.setWindowTitle(u'选择内存测试项')
+
+    def setItemChecked(self, state):
+        sender = self.sender()
+        checked = state == int(Qt.Checked)
+
+        if sender == self.item1:
+            self.executor.sel1 = checked
+        elif sender == self.item2:
+            self.executor.sel2 = checked
+        elif sender == self.item3:
+            self.executor.sel3 = checked
+        elif sender == self.item4:
+            self.executor.sel4 = checked
+
+    def itemChanged(self, item):
+        pkg = str(item.data(1).toPyObject())
+        if item.checkState() == Qt.Checked:
+            self.executor.mempkgs[pkg] = self.executor.usedpkgs.get(pkg)
+        else:
+            self.executor.mempkgs.pop(pkg, 'None')
+
 class Executor(object):
 
     def __init__(self, adb, workout, packages, datatype):
@@ -108,19 +185,30 @@ class Executor(object):
         self.workout = workout
         self.packages = packages
         self.usedpkgs = dict([x for x in packages.items() if x[1].get('activities')])
+        self.usedpkgs['com.android.systemui'] = None
         self.datatype = datatype
 
-    def setup(self):
+    def title(self):
+        return u'内存测试'
+
+    def setup(self, win):
         outpath = '/data/local/tmp/memory/out'
         self.adb.shell('mkdir -p {0}'.format(outpath))
         lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
         if len(lines) > 0:
-            root = Tk()
-            self.retry = askyesno('内存测试', '是否继续上一次的测试', default=NO)
-            root.destroy()
+            self.retry = QMessageBox.question(win, u'内存测试', u'是否继续上一次的内存测试',
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
         else:
             self.retry = False
 
+        if self.retry:
+            return
+
+        self.sel1, self.sel2, self.sel3, self.sel4 = True, True, True, False
+        self.mempkgs = copy.copy(self.usedpkgs)
+        dialog = SelectItemDialog(self, win)
+        dialog.exec_()
+        
     def execute(self):
         self.workout = os.path.join(self.workout, 'memory')
         shutil.rmtree(self.workout, ignore_errors=True)
@@ -133,16 +221,20 @@ class Executor(object):
             pkgpath = os.path.join(self.workout, 'packages.txt')
             pkgfile = open(pkgpath, 'wb')
             pkgfile.write('{0}\n'.format('\n'.join(self.usedpkgs.keys())))
-            pkgfile.write('{0}\n'.format('com.android.systemui'))
             pkgfile.close()
+            mempath = os.path.join(self.workout, 'mempkgs.txt')
+            memfile = open(mempath, 'wb')
+            memfile.write('{0}\n'.format('\n'.join(self.mempkgs.keys())))
+            memfile.close()
 
-            self.adb.kit.masterclear()
-            time.sleep(30)
-            self.adb.waitforboot()
-            if not self.adb.getprop('ro.build.type') == 'user':
-                self.adb.kit.disablekeyguard()
-                self.adb.kit.setupwizard()
-            self.adb.kit.keepscreenon()
+            if self.sel1:
+                self.adb.kit.masterclear()
+                time.sleep(30)
+                self.adb.waitforboot()
+                if not self.adb.getprop('ro.build.type') == 'user':
+                    self.adb.kit.disablekeyguard()
+                    self.adb.kit.setupwizard()
+                self.adb.kit.keepscreenon()
 
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
@@ -151,38 +243,47 @@ class Executor(object):
             self.adb.push(os.path.join(workdir, 'busybox'), tmppath)
             self.adb.shell('chmod 755 {0}/busybox'.format(tmppath))
             self.adb.push(pkgpath, tmppath)
+            self.adb.push(mempath, tmppath)
             os.remove(pkgpath)
+            os.remove(mempath)
 
-            self.adb.shellreadlines('sh {0}/main.sh reset'.format(tmppath))
+            if self.sel1:
+                self.adb.shellreadlines('sh {0}/main.sh reset'.format(tmppath))
 
-            while True:
-                for i in range(3):
-                    if self.adb.ismonkey():
-                        finish = False
-                    else:
-                        finish = True
-                        time.sleep(15)
-                if finish:
-                    break
-                time.sleep(30)
+            def waitforfinish():
+                while True:
+                    for i in range(3):
+                        if self.adb.ismonkey() or self.adb.isuiautomator():
+                            finish = False
+                        else:
+                            finish = True
+                            time.sleep(15)
+                    if finish:
+                        break
+                    time.sleep(30)
 
-            if self.datatype:
-                importdata(self.adb, self.datatype)
-            self.adb.reboot(30)
-            self.adb.kit.disablekeyguard()
+            if self.sel2:
+                self.adb.shellreadline('sh {0}/monkey.sh'.format(tmppath))
+                waitforfinish()
+                self.adb.reboot(30)
+                self.adb.shellreadlines('sh {0}/main.sh normal'.format(tmppath))
+                self.adb.kit.disablekeyguard()
 
-            self.adb.shellreadlines('sh {0}/main.sh memory'.format(tmppath))
+            if self.sel1 and self.sel3 or self.sel4:
+                if self.datatype:
+                    importdata(self.adb, self.datatype)
 
-            while True:
-                for i in range(3):
-                    if self.adb.ismonkey() or self.adb.isuiautomator():
-                        finish = False
-                    else:
-                        finish = True
-                        time.sleep(15)
-                if finish:
-                    break
-                time.sleep(30)
+            if self.sel3:
+                self.adb.reboot(30)
+                self.adb.kit.disablekeyguard()
+                self.adb.shellreadline('sh {0}/main.sh resident'.format(tmppath))
+                waitforfinish()
+
+            if self.sel4:
+                self.adb.reboot(30)
+                self.adb.kit.disablekeyguard()
+                self.adb.shellreadline('sh {0}/main.sh memory'.format(tmppath))
+                waitforfinish()
 
         self.adb.pull('{0}/out'.format(tmppath), self.workout)
         time.sleep(3)

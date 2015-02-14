@@ -22,10 +22,10 @@ if sys.argv[1] == 'py2exe':
         'py2exe': {
             'includes': [
                 'matplotlib.backends',
+                'matplotlib.backends.backend_qt4agg',
                 'matplotlib.figure',
                 'pylab',
                 'numpy',
-                'matplotlib.backends.backend_tkagg',
                 'PIL.Image',
                 'sip'
             ],
@@ -38,16 +38,16 @@ if sys.argv[1] == 'py2exe':
                 '_fltkagg',
                 '_gtk',
                 '_gtkcairo',
-                #'tcl',
-                #'Tkconstants',
-                #'Tkinter'
+                'tcl',
+                'Tkconstants',
+                'Tkinter'
             ],
             'dll_excludes': [
                 'MSVCP90.dll',
                 'libgdk-win32-2.0-0.dll',
                 'libgobject-2.0-0.dll',
-                #'tcl85.dll',
-                #'tk85.dll'
+                'tcl85.dll',
+                'tk85.dll'
             ]
         }
     }
@@ -59,6 +59,7 @@ if sys.argv[1] == 'py2exe':
         'TestKit.apk',
         'automator.jar',
         'adb.exe',
+        'aapt.exe',
         'AdbWinApi.dll',
         'AdbWinUsbApi.dll',
         'logo.png',
@@ -76,6 +77,7 @@ if sys.argv[1] == 'py2exe':
     data_files.append(('screenshot',glob(join('screenshot', '*'))))
 
     # add matplotlib data files
+    #data_files.extend(matplotlib.get_py2exe_datafiles())
     matplotlibdir = dirname(matplotlib.__file__)
     data_files.append((
         'mpl-data',
@@ -84,6 +86,10 @@ if sys.argv[1] == 'py2exe':
     data_files.append((
         'mpl-data',
         glob(join(matplotlibdir, 'mpl-data', 'matplotlibrc'))
+    ))
+    data_files.append((
+        join('mpl-data', 'stylelib'),
+        glob(join(matplotlibdir, 'mpl-data', 'stylelib', '*.*'))
     ))
     data_files.append((
         join('mpl-data', 'images'),
@@ -100,7 +106,8 @@ if sys.argv[1] == 'py2exe':
         console=[{
             'script': 'start.py',
             'icon_resources': [(1, 'logo.ico')]
-        }, {
+        }],
+        windows=[{
             'script': 'upgrade.py',
             'icon_resources': [(1, 'logo.ico')]
         }],

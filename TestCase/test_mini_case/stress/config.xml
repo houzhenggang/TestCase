@@ -37,6 +37,10 @@
         <param name="次数" extra="--ei RebootTest_times" type="int">10</param>
         <desc>重启</desc>
     </item>
+    <item name="开关机测试" type="apk">
+        <param name="次数" extra="--ei PowerOnOffTest_times" type="int">10</param>
+        <desc>开机后等待60秒关机，关机后等待30秒再开机</desc>
+    </item>
     <item name="开机搜网测试" type="apk">
         <param name="次数" extra="--ei NetworkTest_times" type="int">10</param>
         <desc>重启之后检测网络（需插卡）；如果是多卡机，请都插上。</desc>

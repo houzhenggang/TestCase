@@ -3,9 +3,6 @@
 workdir=/data/local/tmp/memory
 workout=${workdir}/out
 
-sleep 5
-dumpsys meminfo > ${workout}/meminfo-2.txt
-
 while read line
 do
     package=${line}
@@ -22,17 +19,9 @@ do
         else
             sh ${workdir}/monitor.sh &
             nid=$!
-            monkey -p ${package} -s 13 --throttle 100 --pct-syskeys 0 --pct-anyevent 0 --ignore-timeouts --ignore-crashes -v 200000 > ${packout}/monkey.txt 2>&1
+            monkey -p ${package} -s 13 --throttle 200 --pct-syskeys 0 --pct-anyevent 0 --ignore-timeouts --ignore-crashes -v 200000 > ${packout}/monkey.txt 2>&1
             kill ${nid}
         fi
         kill ${mid}
     fi
-done < ${workdir}/packages.txt
-
-if [ $(getprop ro.build.version.sdk) -gt 20 ] ;then
-    uiautomator runtest automator.jar -c com.android.systemui.NotificationTestCase\#testClickRecycle
-else
-    uiautomator runtest automator.jar -c com.android.systemui.MultiTaskTestCase\#testRecycle
-fi
-
-dumpsys meminfo > ${workout}/meminfo-3.txt
+done < ${workdir}/mempkgs.txt

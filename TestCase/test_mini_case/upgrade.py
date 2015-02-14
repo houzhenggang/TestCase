@@ -15,9 +15,17 @@ try:
 except ImportError:
     pyqtlib = False
 
-from common import workdir, getconfig
-
 if pyqtlib:
+    class UpdateThread(QThread):
+
+        progressUpdate = pyqtSignal(int, unicode)
+
+        def __init__(self):
+            super(UpdateThread, self).__init__(None)
+
+        def run(self):
+            main(self.progressUpdate)
+
     class UpdateDialog(QDialog):
 
         def __init__(self, parent=None):
@@ -42,32 +50,37 @@ if pyqtlib:
             self.setWindowIcon(QIcon('logo.png'))
 
         def showEvent(self, event):
-            t = threading.Thread(target=main, args=(self.onProgressUpdate,))
-            t.start()
+            self.t = UpdateThread()
+            self.t.progressUpdate.connect(self.onProgressUpdate)
+            self.t.start()
 
         def closeEvent(self, event):
             event.ignore()
 
-        def onProgressUpdate(self, value, text):
-            self.pbar.setValue(value)
-            self.status.setText(text)
+        def onProgressUpdate(self, progress, status):
+            self.pbar.setValue(progress)
+            self.status.setText(status)
             time.sleep(0.5)
-            if value >= 100:
-                sys.exit(2)
+            if progress >= 100:
+                QCoreApplication.instance().quit()
 
-def main(updatecallback=None):
+def main(updatesignal=None):
+    workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+
     # download dist file
-    if updatecallback:
-        updatecallback(10, u'正在下载升级包')
-    distfile = os.path.join(getconfig(3).encode('gb2312'), 'dist.zip')
+    if updatesignal:
+        updatesignal.emit(10, u'正在下载升级包')
+    with open(os.path.join(workdir, 'config.txt'), 'r') as f:
+        remote = unicode(f.readlines()[3].strip(), 'utf-8').encode('gb2312')
+    distfile = os.path.join(remote, 'dist.zip')
     if os.name == 'nt':
         subprocess.Popen('copy \"{0}\" \"{1}\"'.format(distfile, workdir), shell=True).wait()
     else:
         shutil.copy(distfile, workdir)
 
     # unzip dist file
-    if updatecallback:
-        updatecallback(40, u'正在解压缩升级包')
+    if updatesignal:
+        updatesignal.emit(40, u'正在解压缩升级包')
     distfile = os.path.join(workdir, 'dist.zip')
     zf = zipfile.ZipFile(distfile)
     for name in zf.namelist():
@@ -84,15 +97,15 @@ def main(updatecallback=None):
     zf.close()
 
     # delete dist file
-    if updatecallback:
-        updatecallback(90, u'正在删除升级包')
+    if updatesignal:
+        updatesignal.emit(90, u'正在删除升级包')
     os.remove(distfile)
 
     # startup
-    if updatecallback:
-        updatecallback(100, u'升级完成')
+    if updatesignal:
+        updatesignal.emit(100, u'升级完成')
     if len(sys.argv) > 1 and sys.argv[1] == 'start':
-        subprocess.Popen('\"{0}\" {1}'.format(os.path.join(workdir, 'TestPlatform')))
+        subprocess.Popen('\"{0}\"'.format(os.path.join(workdir, 'TestPlatform')))
 
 if __name__ == '__main__':
     if pyqtlib:

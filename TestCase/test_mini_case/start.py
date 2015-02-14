@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import collections
+import copy
 import getopt
 import os
 import re
@@ -11,7 +13,6 @@ import time
 import zipfile
 
 import adbkit
-import common
 import compat
 import memory
 import monkey
@@ -26,7 +27,7 @@ import chart.run as charter
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-from common import workdir, getconfig, importdata
+from common import workdir, getconfig, loginaccounts, importdata
 
 class QueryDeviceThread(QThread):
 
@@ -72,13 +73,13 @@ class SetupExecuteThread(QThread):
 
     statusChange = pyqtSignal(unicode)
 
-    def __init__(self, adb, selected, executor, login, datatype):
+    def __init__(self, adb, executor, login, datatype, workout):
         super(SetupExecuteThread, self).__init__(None)
         self.adb = adb
-        self.selected = selected
         self.executor = executor
         self.login = login
         self.datatype = datatype
+        self.workout = workout
 
     def run(self):
         self.statusChange.emit(u'正在唤醒设备')
@@ -90,49 +91,37 @@ class SetupExecuteThread(QThread):
 
         if self.login:
             self.statusChange.emit(u'正在登录应用帐号')
-            common.loginaccounts(self.adb)
+            loginaccounts(self.adb)
 
         if self.datatype:
             self.statusChange.emit(u'正在导入用户数据')
-            common.importdata(self.adb, self.datatype)
+            importdata(self.adb, self.datatype)
 
         self.statusChange.emit(u'正在执行测试')
         start = time.time()
-        for i in self.selected:
-            self.executor[i].execute()
+        for key in self.executor.keys():
+            self.executor.get(key).execute()
         end = time.time()
 
         self.statusChange.emit(u'正在生成报告')
-        charter.run(workout)
+        charter.run(self.workout)
 
         self.statusChange.emit(u'完成')
         self.adb.kit.destroy()
 
 class SelectTestDialog(QDialog):
 
-    tests = (
-        (u'系统升级', False),
-        (u'应用启动时间测试', True),
-        (u'流畅性测试', True),
-        (u'Monkey测试', True),
-        (u'兼容性测试', True),
-        (u'系统启动时间测试', True),
-        (u'压力测试', True),
-        (u'内存测试', False),
-        (u'截图比较测试', False)
-    )
-
-    def __init__(self, selected, parent=None):
+    def __init__(self, executor, parent=None):
         super(SelectTestDialog, self).__init__(parent)
-        self.selected = selected
+        self.executor = executor
         self.initUI()
 
     def initUI(self):
         self.list = QListWidget(self)
-        for i in range(len(self.tests)):
-            item = QListWidgetItem(self.tests[i][0])
-            item.setCheckState(Qt.Checked if self.tests[i][1] else Qt.Unchecked)
-            item.setData(1, QVariant(i + 1))
+        for key in self.executor.keys():
+            item = QListWidgetItem(self.executor.get(key).title())
+            item.setCheckState(Qt.Unchecked)
+            item.setData(1, QVariant(key))
             self.list.addItem(item)
         self.list.setCurrentRow(0)
 
@@ -165,10 +154,13 @@ class SelectTestDialog(QDialog):
         sender = self.sender()
 
         if sender == self.okButton:
+            tmpexec = copy.copy(self.executor)
+            self.executor.clear()
             for i in range(self.list.count()):
                 item = self.list.item(i)
                 if item.checkState() == Qt.Checked:
-                    self.selected.append(item.data(1).toPyObject())
+                    key = item.data(1).toPyObject()
+                    self.executor[key] = tmpexec.get(key)
             self.accept()
         elif sender == self.selallButton:
             for i in range(self.list.count()):
@@ -200,11 +192,39 @@ class MainWindow(QMainWindow):
         self.qdt.start()
 
     def initUI(self):
+        self.createActions()
+        self.createMenus()
+        self.createToolBars()
+
         self.resize(600, 350)
         self.setStatus(u'就绪')
         self.setWindowTitle(u'自动化测试平台开发版')
         self.setWindowIcon(QIcon('logo.png'))
         self.show()
+
+    def about(self):
+        with open(os.path.join(workdir, 'v.txt'), 'r') as f:
+            ver = f.readline().strip()
+        QMessageBox.about(self, u'关于自动化测试平台',
+                u'<p>自动化测试平台提供日常以及性能测试并支持用例扩展<p>'
+                u'<p>技术支持：中兴移动软件一部一科自动化测试小组</p>'
+                u'<p>软件版本：{0}'.format(ver))
+
+    def createActions(self):
+        self.loginAccountAct = QAction(u'登录帐号', self, triggered=self.about)
+        self.importDataAct = QAction(u'导入用户数据', self, triggered=self.about)
+        self.aboutAct = QAction(u'关于', self, shortcut='F1', triggered=self.about)
+        self.aboutQtAct = QAction(u'关于Qt', self, triggered=qApp.aboutQt)
+
+    def createMenus(self):
+        self.helpMenu = self.menuBar().addMenu(u'帮助(&H)')
+        self.helpMenu.addAction(self.aboutAct)
+        self.helpMenu.addAction(self.aboutQtAct)
+
+    def createToolBars(self):
+        self.prepToolBar = self.addToolBar('PREP')
+        self.prepToolBar.addAction(self.loginAccountAct)
+        self.prepToolBar.addAction(self.importDataAct)
 
     def onDeviceQuery(self, devices):
         self.setStatus(u'就绪')
@@ -216,7 +236,7 @@ class MainWindow(QMainWindow):
                 if not ok:
                     sys.exit(2)
         else:
-            QMessageBox.information(self, u'查询失败', u'<p>查询设备失败</p><p>请连接设备或安装驱动后重试</p>')
+            QMessageBox.information(self, u'查询失败', u'<p>查询设备失败</p><p>请连接设备并打开USB调试后重试</p>')
             sys.exit(2)
 
         self.setStatus(u'正在连接设备 {0}'.format(self.serialno))
@@ -229,18 +249,13 @@ class MainWindow(QMainWindow):
         self.setStatus(u'就绪')
 
         if not self.adb:
-            QMessageBox.information(self, '连接失败', u'<p>连接设备失败</p><p>请确保设备唯一在线且处理空闲状态</p>')
+            QMessageBox.information(self, u'连接失败', u'<p>连接设备失败</p><p>请确保设备唯一在线且处理空闲状态</p>')
             sys.exit(2)
 
-        self.selected = []
-        dialog = SelectTestDialog(self.selected, self)
-        if dialog.exec_():
-            self.setStatus(u'正在查询设备信息')
-            self.qpt = QueryPackageThread(adb)
-            self.qpt.queryPackageFinish.connect(self.onPackageQuery)
-            self.qpt.start()
-        else:
-            sys.exit(2)
+        self.setStatus(u'正在获取设备信息')
+        self.qpt = QueryPackageThread(adb)
+        self.qpt.queryPackageFinish.connect(self.onPackageQuery)
+        self.qpt.start()
 
     def onPackageQuery(self, packages):
         self.setStatus(u'就绪')
@@ -258,46 +273,33 @@ class MainWindow(QMainWindow):
         login = QMessageBox.question(self, u'登录帐号', u'<p>是否登录预置应用帐号</p><p>如需登录请先切换至英文输入法</p>',
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
 
-        datadir = getconfig(1)
         datatype = None
-        if os.path.exists(datadir):
-            dirs = os.listdir(datadir)
-            dirs = [x for x in dirs if os.path.isdir(os.path.join(datadir, x))]
-            item, ok = QInputDialog.getItem(self, u'选择用户数据', u'用户数据类型：', dirs, 0, False)
-            if ok and item:
-                datatype = str(item)
+        datadir = getconfig(1)
+        dirs = os.listdir(datadir)
+        dirs = [x for x in dirs if os.path.isdir(os.path.join(datadir, x))]
+        item, ok = QInputDialog.getItem(self, u'选择用户数据', u'用户数据类型：', dirs, 0, False)
+        if ok and item:
+            datatype = str(item)
 
-        executor = {}
-        for i in self.selected:
-            if i == 1:
-                executor[i] = update.Executor(self.adb, workout)
-                executor[i].setup()
-            elif i == 2:
-                executor[i] = launch.Executor(self.adb, workout, packages)
-                executor[i].setup()
-            elif i == 3:
-                executor[i] = scenes.Executor(self.adb, workout)
-                executor[i].setup()
-            elif i == 4:
-                executor[i] = monkey.Executor(self.adb, workout, packages)
-                executor[i].setup()
-            elif i == 5:
-                executor[i] = compat.Executor(self.adb, workout)
-                executor[i].setup()
-            elif i == 6:
-                executor[i] = uptime.Executor(self.adb, workout)
-                executor[i].setup()
-            elif i == 7:
-                executor[i] = stress.Executor(self.adb, workout)
-                executor[i].setup()
-            elif i == 8:
-                executor[i] = memory.Executor(self.adb, workout, packages, datatype)
-                executor[i].setup()
-            elif i == 9:
-                executor[i] = screenshot.Executor(self.adb, workout)
-                executor[i].setup()
+        executor = collections.OrderedDict()
+        executor[0] = update.Executor(self.adb, workout)
+        executor[1] = launch.Executor(self.adb, workout, packages)
+        executor[2] = scenes.Executor(self.adb, workout)
+        executor[3] = monkey.Executor(self.adb, workout, packages)
+        executor[4] = compat.Executor(self.adb, workout)
+        executor[5] = uptime.Executor(self.adb, workout)
+        executor[6] = stress.Executor(self.adb, workout)
+        executor[7] = memory.Executor(self.adb, workout, packages, datatype)
+        executor[8] = screenshot.Executor(self.adb, workout)
 
-        self.set = SetupExecuteThread(self.adb, self.selected, executor, login, datatype)
+        dialog = SelectTestDialog(executor, self)
+        if not dialog.exec_() or not executor:
+            sys.exit(2)
+
+        for key in executor.keys():
+            executor.get(key).setup(self)
+
+        self.set = SetupExecuteThread(self.adb, executor, login, datatype, workout)
         self.set.statusChange.connect(self.setStatus)
         self.set.start()
 

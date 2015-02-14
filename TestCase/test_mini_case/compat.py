@@ -19,7 +19,10 @@ class Executor(object):
         self.adb = adb
         self.workout = workout
 
-    def setup(self):
+    def title(self):
+        return u'兼容性测试'
+
+    def setup(self, win):
         pass
 
     def install(self, package, sdcard=False):
@@ -93,7 +96,7 @@ class Executor(object):
 
         for filename in glob.glob(os.path.join(unicode(remotedir, 'utf-8'), '*.apk')):
             apkfile = filename.encode('gb2312')
-            apk = common.Apk(apkfile)
+            apk = Apk(apkfile)
             if apk.package:
                 self.adb.push(apkfile, '/data/local/tmp/tmp.apk')
                 r1 = self.install(apk.package)

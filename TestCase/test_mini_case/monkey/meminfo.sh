@@ -8,7 +8,7 @@ touch ${outfile}
 
 while [ true ]
 do
-    sleep 20
+    sleep 5
     dumpsys meminfo ${1} > ${tmpfile}
     cat ${tmpfile} >> ${outfile}
 done
