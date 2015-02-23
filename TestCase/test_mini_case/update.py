@@ -10,37 +10,55 @@ from common import workdir
 
 class Executor(object):
 
-    def __init__(self, adb, workout):
-        self.adb = adb
-        self.workout = workout
+    def __init__(self, main):
+        self.adb = main.adb
+        self.section = None
 
     def title(self):
         return u'系统升级'
 
-    def setup(self, win):
-        configs = open(os.path.join(workdir, 'update', 'config.txt'), 'r')
-        rootdir = configs.readlines()[1].strip()
-        configs.close()
+    def sectionChanged(self, text):
+        self.section = text
 
-        self.buildfile = None
-        sections = os.listdir(rootdir)
+    def setup(self):
+        with open(os.path.join(workdir, 'update', 'config.txt'), 'r') as f:
+            self.rootdir = f.readlines()[1].strip()
+        sections = os.listdir(self.rootdir)
+
         if sections:
-            item, ok = QInputDialog.getItem(win, u'系统升级', u'选择科室', sections, 0, False)
-            if ok and item:
-                builddir = os.path.join(rootdir, str(item))
-                builddir = os.path.join(builddir, self.adb.getprop('ro.product.model'))
+            page = QWizardPage()
+            page.setTitle(self.title())
+            page.setSubTitle(u'系统升级说明')
 
-                if os.path.exists(builddir):
-                    filelist = os.listdir(builddir)
+            label = QLabel(u'选择科室')
+            combo = QComboBox()
+            combo.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            combo.addItems(sections)
+            combo.activated[str].connect(self.sectionChanged)
 
-                    if len(filelist) > 0:
-                        self.buildfile = max(filelist, key=os.path.basename)
-                        self.buildfile = os.path.join(builddir, self.buildfile)
+            self.section = str(combo.currentText())
+
+            layout = QHBoxLayout()
+            layout.addWidget(label)
+            layout.addWidget(combo)
+            page.setLayout(layout)
+
+            return page
 
     def execute(self):
-        if self.buildfile:
-            self.adb.push(self.buildfile, '/sdcard/update.zip')
-            self.adb.kit.disablekeyguard()
-            self.adb.kit.localupdate()
-            time.sleep(30)
-            self.adb.waitforboot()
+        if self.section:
+            builddir = os.path.join(self.rootdir, self.section)
+            builddir = os.path.join(builddir, self.adb.getprop('ro.product.model'))
+
+            if os.path.exists(builddir):
+                filelist = os.listdir(builddir)
+
+                if filelist:
+                    buildfile = max(filelist, key=os.path.basename)
+                    buildfile = os.path.join(builddir, buildfile)
+                    
+                    self.adb.push(buildfile, '/sdcard/update.zip')
+                    self.adb.kit.disablekeyguard()
+                    self.adb.kit.localupdate()
+                    time.sleep(30)
+                    self.adb.waitforboot()

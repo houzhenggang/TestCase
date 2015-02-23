@@ -3,6 +3,8 @@
 workdir=/data/local/tmp/monkey
 workout=${workdir}/out
 
+echo $$ > ${workdir}/pid.txt
+
 blacklist=${workdir}/blacklist.txt
 rm -f ${blacklist}
 

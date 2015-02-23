@@ -18,7 +18,7 @@ def devices():
         m = re.search('^(\S+)\s+device', line)
         if m:
             results.append(m.groups()[0])
-    return tuple(results)
+    return tuple(sorted(results))
 
 class Adb(object):
 
@@ -157,15 +157,16 @@ class Adb(object):
     def pidof(self, name):
         return [x.split()[1] for x in self.shellreadlines('ps') if x.split()[-1] == name]
 
+    def waitforproc(self, pid, interval=30):
+        while pid.isdigit():
+            lines = self.shellreadlines('ls -F /proc/{0}'.format(pid))
+            if len(lines) < 2:
+                break
+            time.sleep(interval)
+
     def kill(self, proc):
         for pid in self.pidof(proc):
             self.shell('kill {0}'.format(pid))
-
-    def ismonkey(self):
-        return self.pidof('com.android.commands.monkey')
-
-    def isuiautomator(self):
-        return self.pidof('uiautomator')
 
 class Uia(object):
 

@@ -22,6 +22,7 @@
     </item>
     <item name="休眠唤醒测试" type="apk">
         <param name="次数" extra="--ei SleepWakeTest_times" type="int">10</param>
+        <param name="休眠时间（毫秒）" extra="--ei sleeptime" type="int">10000</param>
         <desc>熄屏唤醒</desc>
     </item>
     <item name="通话测试" type="apk">

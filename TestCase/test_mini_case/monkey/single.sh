@@ -3,6 +3,8 @@
 workdir=/data/local/tmp/monkey
 workout=${workdir}/out
 
+echo $$ > ${workdir}/pid.txt
+
 while read line
 do
     package=${line}

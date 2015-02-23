@@ -3,6 +3,8 @@
 workdir=/data/local/tmp/scenes
 workout=${workdir}/out
 
+echo $$ > ${workdir}/pid.txt
+
 function execute()
 {
     outpath=${workout}/$1

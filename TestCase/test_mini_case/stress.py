@@ -15,14 +15,63 @@ from PyQt4.QtCore import *
 
 from common import workdir
 
-class StressSelectDialog(QDialog):
+class StressMonitorThread(threading.Thread):
 
-    def __init__(self, items, parent=None):
-        super(StressSelectDialog, self).__init__(parent)
-        self.items = items
-        self.initUI()
+    def __init__(self, adb):
+        threading.Thread.__init__(self)
+        self.adb = adb
+        self.loop = True
 
-    def initUI(self):
+    def run(self):
+        while self.loop:
+            i = 0
+            while self.loop and i < 30:
+                time.sleep(1)
+                i += 1
+            if not [x for x in self.adb.shellreadlines('ps') if x.split()[-1] == 'com.ztemt.test.stress']:
+                self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity')
+
+    def stop(self):
+        self.loop = False
+
+class Executor(object):
+
+    def __init__(self, main):
+        self.adb = main.adb
+        self.workout = main.workout
+
+    def title(self):
+        return u'压力测试'
+
+    def paramClicked(self, param, column):
+        if column == 1 and not param.childCount():
+            param.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable)
+        else:
+            param.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+
+    def paramChanged(self, param, column):
+        if column == 0 and param.childCount():
+            self.items[param.data(0, 1).toPyObject()].attrib['selected'] = param.checkState(column) == Qt.Checked
+        elif column == 1 and not param.childCount():
+            if param.parent():
+                text = unicode(param.text(column))
+                p = self.items[param.parent().data(0, 1).toPyObject()].findall('param')[param.data(0, 1).toPyObject()]
+                if p.attrib['type'] == 'int':
+                    if text.isdigit():
+                        p.text = text
+                    else:
+                        param.setText(1, p.text)
+                else:
+                    p.text = text
+
+    def setup(self):
+        with open(os.path.join(workdir, 'stress', 'config.xml'), 'r') as f:
+            self.items = ElementTree(file=f).findall('item')
+
+        page = QWizardPage()
+        page.setTitle(self.title())
+        page.setSubTitle(u'压力测试说明')
+
         tree = QTreeWidget()
         tree.setColumnCount(2)
         tree.setHeaderLabels([u'测试项', u'描述'])
@@ -46,94 +95,32 @@ class StressSelectDialog(QDialog):
 
             tree.addTopLevelItem(item)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
+        layout = QVBoxLayout()
+        layout.addWidget(tree)
+        page.setLayout(layout)
 
-        hbox = QVBoxLayout()
-        hbox.addWidget(tree)
-        hbox.addWidget(buttonBox)
-
-        self.setLayout(hbox)
-        self.resize(500, 300)
-        self.setWindowTitle(u'选择压力测试项')
-
-    def paramClicked(self, param, column):
-        if column == 1 and not param.childCount():
-            param.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable)
-        else:
-            param.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
-
-    def paramChanged(self, param, column):
-        if column == 0 and param.childCount():
-            self.items[param.data(0, 1).toPyObject()].attrib['selected'] = param.checkState(column) == Qt.Checked
-        elif column == 1 and not param.childCount():
-            if param.parent():
-                text = unicode(param.text(column))
-                p = self.items[param.parent().data(0, 1).toPyObject()].findall('param')[param.data(0, 1).toPyObject()]
-                if p.attrib['type'] == 'int':
-                    if text.isdigit():
-                        p.text = text
-                    else:
-                        param.setText(1, p.text)
-                else:
-                    p.text = text
-
-class StressMonitorThread(threading.Thread):
-
-    def __init__(self, adb):
-        threading.Thread.__init__(self)
-        self.adb = adb
-        self.loop = True
-
-    def run(self):
-        while self.loop:
-            i = 0
-            while self.loop and i < 30:
-                time.sleep(1)
-                i += 1
-            if not [x for x in self.adb.shellreadlines('ps') if x.split()[-1] == 'com.ztemt.test.stress']:
-                self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity')
-
-    def stop(self):
-        self.loop = False
-
-class Executor(object):
-
-    def __init__(self, adb, workout):
-        self.adb = adb
-        self.workout = workout
-
-    def title(self):
-        return u'压力测试'
-
-    def setup(self, win):
-        with open(os.path.join(workdir, 'stress', 'config.xml'), 'r') as f:
-            items = ElementTree(file=f).findall('item')
-
-        dialog = StressSelectDialog(items, win)
-        dialog.exec_()
-
-        self.extras = []
-        self.pyfunc = []
-        for item in [item for item in items if 'selected' in item.keys() and item.attrib['selected']]:
-            if item.attrib['type'] == 'pyf':
-                self.pyfunc.append(item)
-            elif item.attrib['type'] == 'apk':
-                for param in item.findall('param'):
-                    self.extras.append('{0} {1}'.format(param.attrib['extra'], param.text))
+        return page
 
     def execute(self):
         stress = os.path.join(self.workout, 'stress.csv')
         if os.path.exists(stress):
             os.remove(stress)
 
-        if self.extras:
+        extras = []
+        pyfunc = []
+        for item in [item for item in self.items if 'selected' in item.keys() and item.attrib['selected']]:
+            if item.attrib['type'] == 'pyf':
+                pyfunc.append(item)
+            elif item.attrib['type'] == 'apk':
+                for param in item.findall('param'):
+                    extras.append('{0} {1}'.format(param.attrib['extra'], param.text))
+
+        if extras:
             tags = self.adb.getprop('ro.build.tags')
             self.adb.install(os.path.join(workdir, 'stress', 'StressTest_{0}.apk'.format(tags)))
             t = StressMonitorThread(self.adb)
             t.start()
-            lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(self.extras)), 'stress.csv', 30)
+            lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(extras)), 'stress.csv', 30)
             t.stop()
             t.join()
             report = open(stress, 'wb')
@@ -142,7 +129,7 @@ class Executor(object):
             report.close()
             self.adb.uninstall('com.ztemt.test.stress')
 
-        if self.pyfunc:
+        if pyfunc:
             if os.path.exists(stress):
                 report = open(stress, 'ab+')
                 writer = csv.writer(report, quoting=csv.QUOTE_ALL)
@@ -151,7 +138,7 @@ class Executor(object):
                 report.write(codecs.BOM_UTF8)
                 writer = csv.writer(report, quoting=csv.QUOTE_ALL)
                 writer.writerow(['测试项', '总次数', '测试次数', '成功次数', '失败次数'])
-            for item in self.pyfunc:
+            for item in pyfunc:
                 es = []
                 for param in item.findall('param'):
                     es.append((param.attrib['extra'], param.text))

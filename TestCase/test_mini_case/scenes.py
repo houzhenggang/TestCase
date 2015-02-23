@@ -19,22 +19,30 @@ from common import workdir
 
 class Executor(object):
 
-    def __init__(self, adb, workout):
-        self.adb = adb
-        self.workout = workout
+    def __init__(self, main):
+        self.adb = main.adb
+        self.workout = main.workout
+        self.retry = False
 
     def title(self):
         return u'流畅性测试'
 
-    def setup(self, win):
-        outpath = '/data/local/tmp/scenes/out'
-        self.adb.shell('mkdir -p {0}'.format(outpath))
-        lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
-        if len(lines) > 0:
-            self.retry = QMessageBox.question(win, u'流畅性测试', u'是否继续上一次的流畅性测试',
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
-        else:
-            self.retry = False
+    def retryChecked(self, checked):
+        self.retry = checked
+
+    def setup(self):
+        page = QWizardPage()
+        page.setTitle(self.title())
+        page.setSubTitle(u'流畅性测试说明')
+
+        check = QCheckBox(u'继续上一次的流畅性测试')
+        check.toggled[bool].connect(self.retryChecked)
+
+        layout = QVBoxLayout()
+        layout.addWidget(check)
+        page.setLayout(layout)
+
+        return page
 
     def execute(self):
         self.workout = os.path.join(self.workout, 'scenes')
@@ -42,11 +50,12 @@ class Executor(object):
         if not os.path.exists(self.workout):
             os.mkdir(self.workout)
 
-        self.adb.reboot(30)
+        tmppath = '/data/local/tmp/scenes'
+
+        self.adb.reboot(5)
         self.adb.kit.disablekeyguard()
         self.adb.kit.trackframetime()
 
-        tmppath = '/data/local/tmp/scenes'
         if not self.retry:
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
@@ -56,18 +65,8 @@ class Executor(object):
             self.adb.shell('chmod 755 {0}/busybox'.format(tmppath))
 
         self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
-
-        while True:
-            for i in range(3):
-                if self.adb.isuiautomator():
-                    finish = False
-                    break
-                else:
-                    finish = True
-                    time.sleep(15)
-            if finish:
-                break
-            time.sleep(30)
+        pid = self.adb.shellreadline('cat {0}/pid.txt'.format(tmppath))
+        self.adb.waitforproc(pid)
 
         self.adb.pull('{0}/out'.format(tmppath), self.workout)
         time.sleep(3)

@@ -226,32 +226,91 @@ def skpinfo(outdir):
     writer.writerow([os.path.basename(outdir), sum([x * stat[x] for x in stat]), sum(stat.values())])
     report.close()
 
-class SelectItemDialog(QDialog):
+class Executor(object):
 
-    def __init__(self, executor, parent=None):
-        super(SelectItemDialog, self).__init__(parent)
-        self.executor = executor
-        self.tmppkgs = copy.copy(executor.usedpkgs)
-        self.initUI()
+    def __init__(self, main):
+        self.adb = main.adb
+        self.workout = main.workout
+        self.packages = main.packages
+        self.usedpkgs = dict([x for x in self.packages.items() if x[1].get('activities')])
+        self.temppkgs = copy.copy(self.usedpkgs)
+        self.retry = False
+        self.single = True
+        self.seed = 10
+        self.throttle = 50
+        self.count = 200000 if self.single else 1000000
 
-    def initUI(self):
+    def title(self):
+        return u'Monkey测试'
+
+    def retryChecked(self, checked):
+        self.retry = checked
+        self.itemGroup.setDisabled(self.retry)
+        self.listGroup.setDisabled(self.retry or not self.single)
+
+    def radio1Toggled(self, checked):
+        self.single = False
+        self.count = 1000000
+        self.edit3.setText(str(self.count))
+        self.listGroup.setDisabled(True)
+
+    def radio2Toggled(self, checked):
+        self.single = True
+        self.count = 200000
+        self.edit3.setText(str(self.count))
+        self.listGroup.setDisabled(False)
+
+    def edit1Changed(self, text):
+        if str(text).isdigit():
+            self.seed = int(text)
+        else:
+            self.edit1.undo()
+
+    def edit2Changed(self, text):
+        if str(text).isdigit():
+            self.throttle = int(text)
+        else:
+            self.edit2.undo()
+
+    def edit3Changed(self, text):
+        if str(text).isdigit():
+            self.count = int(text)
+        else:
+            self.edit3.undo()
+
+    def itemChanged(self, item):
+        pkg = str(item.data(1).toPyObject())
+        if pkg == 'selall':
+            for i in range(self.list.count()):
+                self.list.item(i).setCheckState(item.checkState())
+        else:
+            if item.checkState() == Qt.Checked:
+                self.usedpkgs[pkg] = self.temppkgs.get(pkg)
+            else:
+                self.usedpkgs.pop(pkg, 'None')
+
+    def setup(self):
+        page = QWizardPage()
+        page.setTitle(self.title())
+        page.setSubTitle(u'Monkey测试说明')
+
+        check = QCheckBox(u'继续上一次的Monkey测试')
+        check.toggled[bool].connect(self.retryChecked)
+
         self.radio1 = QRadioButton(u'整机Monkey测试')
-        self.radio1.toggled[bool].connect(self.radioToggled)
+        self.radio1.toggled[bool].connect(self.radio1Toggled)
         self.radio2 = QRadioButton(u'单包Monkey测试')
-        self.radio2.setChecked(self.executor.single)
-        self.radio2.toggled[bool].connect(self.radioToggled)
-        self.edit1 = QLineEdit(str(self.executor.seed))
+        self.radio2.setChecked(self.single)
+        self.radio2.toggled[bool].connect(self.radio2Toggled)
+        self.edit1 = QLineEdit(str(self.seed))
         self.edit1.setValidator(QIntValidator())
-        self.edit1.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.edit1.textChanged[str].connect(self.editChanged)
-        self.edit2 = QLineEdit(str(self.executor.throttle))
+        self.edit1.textChanged[str].connect(self.edit1Changed)
+        self.edit2 = QLineEdit(str(self.throttle))
         self.edit2.setValidator(QIntValidator())
-        self.edit2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.edit2.textChanged[str].connect(self.editChanged)
-        self.edit3 = QLineEdit(str(self.executor.count))
+        self.edit2.textChanged[str].connect(self.edit2Changed)
+        self.edit3 = QLineEdit(str(self.count))
         self.edit3.setValidator(QIntValidator())
-        self.edit3.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.edit3.textChanged[str].connect(self.editChanged)
+        self.edit3.textChanged[str].connect(self.edit3Changed)
         gridLayout = QGridLayout()
         gridLayout.addWidget(QLabel(u'种子数'), 0, 0)
         gridLayout.addWidget(self.edit1, 0, 1)
@@ -264,107 +323,36 @@ class SelectItemDialog(QDialog):
         itemLayout.addWidget(self.radio2)
         itemLayout.addStretch()
         itemLayout.addLayout(gridLayout)
-        itemGroup = QGroupBox(u'Monkey测试参数')
-        itemGroup.setLayout(itemLayout)
-        list = QListWidget(self)
-        list.itemChanged.connect(self.itemChanged)
-        for key in self.executor.usedpkgs.keys():
+        self.itemGroup = QGroupBox(u'Monkey测试参数')
+        self.itemGroup.setLayout(itemLayout)
+        selall = QListWidgetItem(u'全选')
+        selall.setCheckState(Qt.Checked)
+        selall.setData(1, QVariant('selall'))
+        self.list = QListWidget(page.wizard())
+        self.list.itemChanged.connect(self.itemChanged)
+        self.list.addItem(selall)
+        for key in self.temppkgs.keys():
             item = QListWidgetItem(key)
             item.setCheckState(Qt.Checked)
             item.setData(1, QVariant(key))
-            list.addItem(item)
-        list.setCurrentRow(0)
+            self.list.addItem(item)
         listLayout = QVBoxLayout()
-        listLayout.addWidget(list)
-        listGroup = QGroupBox(u'单包Monkey测试可选包名')
-        listGroup.setLayout(listLayout)
+        listLayout.addWidget(self.list)
+        self.listGroup = QGroupBox(u'单包Monkey测试可选包名')
+        self.listGroup.setLayout(listLayout)
 
         itemLayout = QHBoxLayout()
-        itemLayout.addWidget(itemGroup)
-        itemLayout.addWidget(listGroup)
+        itemLayout.addWidget(self.itemGroup)
+        itemLayout.addWidget(self.listGroup)
+        itemLayout.setStretch(0, 1)
+        itemLayout.setStretch(1, 3)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
+        layout = QVBoxLayout()
+        layout.addWidget(check)
+        layout.addLayout(itemLayout)
+        page.setLayout(layout)
 
-        mainLayout = QVBoxLayout()
-        mainLayout.addLayout(itemLayout)
-        mainLayout.addWidget(buttonBox)
-
-        self.setLayout(mainLayout)
-        self.resize(540, 215)
-        self.setWindowTitle(u'选择Monkey测试参数')
-
-    def radioToggled(self, checked):
-        sender = self.sender()
-
-        if sender == self.radio1:
-            self.executor.single = False
-            self.executor.count = 1000000
-        elif sender == self.radio2:
-            self.executor.single = True
-            self.executor.count = 200000
-        self.edit3.setText(str(self.executor.count))
-
-    def editChanged(self, text):
-        sender = self.sender()
-
-        if sender == self.edit1:
-            if str(text).isdigit():
-                self.executor.seed = int(text)
-            else:
-                self.edit1.undo()
-        elif sender == self.edit2:
-            if str(text).isdigit():
-                self.executor.throttle = int(text)
-            else:
-                self.edit2.undo()
-        elif sender == self.edit3:
-            if str(text).isdigit():
-                self.executor.count = int(text)
-            else:
-                self.edit3.undo()
-
-    def itemChanged(self, item):
-        pkg = str(item.data(1).toPyObject())
-        if item.checkState() == Qt.Checked:
-            self.executor.usedpkgs[pkg] = self.tmppkgs.get(pkg)
-        else:
-            self.executor.usedpkgs.pop(pkg, 'None')
-
-class Executor(object):
-
-    def __init__(self, adb, workout, packages):
-        self.adb = adb
-        self.workout = workout
-        self.packages = packages
-        self.usedpkgs = dict([x for x in packages.items() if x[1].get('activities')])
-
-    def title(self):
-        return u'Monkey测试'
-
-    def setup(self, win):
-        outpath = '/data/local/tmp/monkey/out'
-        self.adb.shell('mkdir -p {0}'.format(outpath))
-        lines = self.adb.shellreadlines('ls -F {0}'.format(outpath))
-        lines = [line.split() for line in lines]
-        if len(lines) > 0:
-            self.single = ['-', 'monkey.txt'] not in lines
-            self.retry = QMessageBox.question(win, u'Monkey测试', u'是否继续上一次的{0}Monkey测试'.format('单包' if self.single else '整机'),
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
-        else:
-            self.retry = False
-
-        if self.retry:
-            return
-
-        self.single = True
-        self.seed = 10
-        self.throttle = 50
-        self.count = 200000 if self.single else 1000000
-
-        dialog = SelectItemDialog(self, win)
-        dialog.exec_()
+        return page
 
     def execute(self):
         self.workout = os.path.join(self.workout, 'monkey')
@@ -372,13 +360,11 @@ class Executor(object):
         if not os.path.exists(self.workout):
             os.mkdir(self.workout)
 
-        if self.retry and self.single or not self.retry:
-            if not self.retry:
-                self.adb.reboot(30)
-            self.adb.kit.disablekeyguard()
-            self.adb.kit.trackframetime()
-
         tmppath = '/data/local/tmp/monkey'
+
+        self.adb.reboot(5)
+        self.adb.kit.disablekeyguard()
+        self.adb.kit.trackframetime()
 
         if self.retry:
             self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
@@ -400,17 +386,8 @@ class Executor(object):
             params = [str(self.seed), str(self.throttle), str(self.count), str(1 if self.single else 0)]
             self.adb.shellreadlines('sh {0}/main.sh {1}'.format(tmppath, ' '.join(params)))
 
-        while True:
-            for i in range(3):
-                if self.adb.ismonkey():
-                    finish = False
-                    break
-                else:
-                    finish = True
-                    time.sleep(15)
-            if finish:
-                break
-            time.sleep(30)
+        pid = self.adb.shellreadline('cat {0}/pid.txt'.format(tmppath))
+        self.adb.waitforproc(pid)
 
         self.adb.pull('{0}/out'.format(tmppath), self.workout)
         time.sleep(3)
@@ -419,7 +396,7 @@ class Executor(object):
             for name in names:
                 if name == 'monkey.txt':
                     monkey(dirpath, self.packages)
-                elif name == 'meminfo.txt' and self.single:
+                elif name == 'meminfo.txt':
                     meminfo(dirpath)
                 elif name == 'gfxinfo.txt':
                     gfxinfo(dirpath)

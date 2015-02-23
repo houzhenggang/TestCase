@@ -15,14 +15,14 @@ from common import Apk, workdir
 
 class Executor(object):
 
-    def __init__(self, adb, workout):
-        self.adb = adb
-        self.workout = workout
+    def __init__(self, main):
+        self.adb = main.adb
+        self.workout = main.workout
 
     def title(self):
         return u'兼容性测试'
 
-    def setup(self, win):
+    def setup(self):
         pass
 
     def install(self, package, sdcard=False):
@@ -76,7 +76,7 @@ class Executor(object):
         return y(install), y(launch), y(uninstall), z(except1), z(except2), z(except3)
 
     def execute(self):
-        self.adb.reboot(30)
+        self.adb.reboot(5)
         self.adb.kit.disablekeyguard()
         remotedir = open(os.path.join(workdir, 'compat', 'config.txt'), 'r').readlines()[1].strip()
 

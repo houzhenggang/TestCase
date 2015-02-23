@@ -6,6 +6,8 @@ mkdir -p ${workout}
 
 if [ $1 == 'reset' ] ;then
     ${workdir}/busybox nohup sh ${workdir}/reset.sh
+elif [ $1 == 'monkey' ] ;then
+    ${workdir}/busybox nohup sh ${workdir}/monkey.sh
 elif [ $1 == 'normal' ] ;then
     ${workdir}/busybox nohup sh ${workdir}/normal.sh
 elif [ $1 == 'resident' ] ;then

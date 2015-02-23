@@ -9,15 +9,15 @@ import threading
 
 class Executor(object):
 
-    def __init__(self, adb, workout, packages):
-        self.adb = adb
-        self.workout = workout
-        self.packages = packages
+    def __init__(self, main):
+        self.adb = main.adb
+        self.workout = main.workout
+        self.packages = main.packages
 
     def title(self):
         return u'应用启动时间测试'
 
-    def setup(self, win):
+    def setup(self):
         self.count = 11
 
     def startactivity(self, package, activity, cleartask=True):
@@ -54,7 +54,7 @@ class Executor(object):
         return title, size, sample, minval, maxval, avgval
 
     def execute(self):
-        self.adb.reboot(30)
+        self.adb.reboot(5)
         self.adb.kit.wakeup()
         self.adb.kit.disablekeyguard()
 

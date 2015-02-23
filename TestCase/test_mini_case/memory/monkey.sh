@@ -2,6 +2,8 @@
 
 workdir=/data/local/tmp/memory
 workout=${workdir}/out
+
+echo $$ > ${workdir}/pid.txt
 mkdir -p ${workout}
 
 blacklist=${workdir}/blacklist.txt
