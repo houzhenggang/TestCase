@@ -228,10 +228,10 @@ def skpinfo(outdir):
 
 class Executor(object):
 
-    def __init__(self, main):
-        self.adb = main.adb
-        self.workout = main.workout
-        self.packages = main.packages
+    def __init__(self, adb, workout, packages):
+        self.adb = adb
+        self.workout = workout
+        self.packages = packages
         self.usedpkgs = dict([x for x in self.packages.items() if x[1].get('activities')])
         self.temppkgs = copy.copy(self.usedpkgs)
         self.retry = False
@@ -354,7 +354,7 @@ class Executor(object):
 
         return page
 
-    def execute(self):
+    def execute(self, log):
         self.workout = os.path.join(self.workout, 'monkey')
         shutil.rmtree(self.workout, ignore_errors=True)
         if not os.path.exists(self.workout):
@@ -362,18 +362,19 @@ class Executor(object):
 
         tmppath = '/data/local/tmp/monkey'
 
+        log(self.msg(u'正在重启'))
         self.adb.reboot(5)
         self.adb.kit.disablekeyguard()
+        log(self.msg(u'正在开启GPU呈现模式分析'))
         self.adb.kit.trackframetime()
 
-        if self.retry:
-            self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
-        else:
+        if not self.retry:
             pkgpath = os.path.join(self.workout, 'packages.txt')
             pkgfile = open(pkgpath, 'wb')
             pkgfile.write('{0}\n'.format('\n'.join(self.usedpkgs.keys())))
             pkgfile.close()
 
+            log(self.msg(u'正在复制测试脚本'))
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'monkey'), tmppath)
@@ -383,15 +384,21 @@ class Executor(object):
             self.adb.push(pkgpath, tmppath)
             os.remove(pkgpath)
 
+        log(self.msg(u'正在执行测试脚本'))
+        if self.retry:
+            self.adb.shellreadlines('sh {0}/main.sh'.format(tmppath))
+        else:
             params = [str(self.seed), str(self.throttle), str(self.count), str(1 if self.single else 0)]
             self.adb.shellreadlines('sh {0}/main.sh {1}'.format(tmppath, ' '.join(params)))
 
         pid = self.adb.shellreadline('cat {0}/pid.txt'.format(tmppath))
         self.adb.waitforproc(pid)
 
+        log(self.msg(u'正在导出测试结果'))
         self.adb.pull('{0}/out'.format(tmppath), self.workout)
         time.sleep(3)
 
+        log(self.msg(u'正在分析测试结果'))
         for dirpath, dirnames, names in os.walk(self.workout):
             for name in names:
                 if name == 'monkey.txt':
@@ -402,3 +409,6 @@ class Executor(object):
                     gfxinfo(dirpath)
                 elif name == 'skpinfo.txt':
                     skpinfo(dirpath)
+
+    def msg(self, text):
+        return u'[{0}] {1}'.format(self.title(), text)

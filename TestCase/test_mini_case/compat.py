@@ -15,9 +15,9 @@ from common import Apk, workdir
 
 class Executor(object):
 
-    def __init__(self, main):
-        self.adb = main.adb
-        self.workout = main.workout
+    def __init__(self, adb, workout):
+        self.adb = adb
+        self.workout = workout
 
     def title(self):
         return u'兼容性测试'
@@ -75,7 +75,8 @@ class Executor(object):
         z = lambda x: x if x else ''
         return y(install), y(launch), y(uninstall), z(except1), z(except2), z(except3)
 
-    def execute(self):
+    def execute(self, log):
+        log(self.msg(u'正在重启'))
         self.adb.reboot(5)
         self.adb.kit.disablekeyguard()
         remotedir = open(os.path.join(workdir, 'compat', 'config.txt'), 'r').readlines()[1].strip()
@@ -94,18 +95,26 @@ class Executor(object):
             writer.writerow(['文件名', '应用名', '包名', '版本', '安装i', '启动i', '卸载i', '安装s', '启动s', '卸载s',
                     '异常i-1', '异常i-2', '异常i-3', '异常s-1', '异常s-2', '异常s-3'])
 
-        for filename in glob.glob(os.path.join(unicode(remotedir, 'utf-8'), '*.apk')):
+        filenames = glob.glob(os.path.join(unicode(remotedir, 'utf-8'), '*.apk'))
+        for i, filename in enumerate(filenames, 1):
             apkfile = filename.encode('gb2312')
             apk = Apk(apkfile)
+            apkname = os.path.basename(filename)
             if apk.package:
+                log(self.msg(u'正在检查 {0} {1}/{2}'.format(apkname, i, len(filenames))))
                 self.adb.push(apkfile, '/data/local/tmp/tmp.apk')
                 r1 = self.install(apk.package)
                 if shareddata:
-                    writer.writerow([os.path.basename(filename), apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
+                    writer.writerow([apkname, apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
                             r1[3], r1[4], r1[5]])
                 else:
                     r2 = self.install(apk.package, True)
-                    writer.writerow([os.path.basename(filename), apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
+                    writer.writerow([apkname, apk.label, apk.package, apk.version, r1[0], r1[1], r1[2],
                             r2[0], r2[1], r2[2], r1[3], r1[4], r1[5], r2[3], r2[4], r2[5]])
                 report.flush()
+            else:
+                log(self.msg(u'无法解析 {0} {1}/{2}'.format(apkname, i, len(filenames))), 'red')
         report.close()
+
+    def msg(self, text):
+        return u'[{0}] {1}'.format(self.title(), text)

@@ -104,11 +104,11 @@ def stat(outdir):
 
 class Executor(object):
 
-    def __init__(self, main):
-        self.main = main
-        self.adb = main.adb
-        self.workout = main.workout
-        self.packages = main.packages
+    def __init__(self, adb, workout, packages, inst):
+        self.adb = adb
+        self.workout = workout
+        self.packages = packages
+        self.inst = inst
         self.usedpkgs = dict([x for x in self.packages.items() if x[1].get('activities')])
         self.usedpkgs['com.android.systemui'] = None
         self.temppkgs = copy.copy(self.usedpkgs)
@@ -193,8 +193,8 @@ class Executor(object):
         itemLayout = QHBoxLayout()
         itemLayout.addWidget(self.itemGroup)
         itemLayout.addWidget(self.listGroup)
-        itemLayout.setStretch(0, 4)
-        itemLayout.setStretch(1, 9)
+        itemLayout.setStretch(0, 1)
+        itemLayout.setStretch(1, 3)
 
         layout = QVBoxLayout()
         layout.addWidget(check)
@@ -203,7 +203,7 @@ class Executor(object):
 
         return page
         
-    def execute(self):
+    def execute(self, log):
         self.workout = os.path.join(self.workout, 'memory')
         shutil.rmtree(self.workout, ignore_errors=True)
         if not os.path.exists(self.workout):
@@ -222,6 +222,7 @@ class Executor(object):
             memfile.close()
 
             if self.sel1:
+                log(self.msg(u'正在恢复出厂设置'))
                 self.adb.kit.masterclear()
                 time.sleep(30)
                 self.adb.waitforboot()
@@ -230,6 +231,7 @@ class Executor(object):
                     self.adb.kit.setupwizard()
                 self.adb.kit.keepscreenon()
 
+            log(self.msg(u'正在复制测试脚本'))
             self.adb.shell('rm -rf {0}'.format(tmppath))
             self.adb.shell('mkdir -p {0}'.format(tmppath))
             self.adb.push(os.path.join(workdir, 'memory'), tmppath)
@@ -242,37 +244,48 @@ class Executor(object):
             os.remove(mempath)
 
             if self.sel1:
+                log(self.msg(u'正在抓取开机启动内存信息'))
                 self.adb.shellreadlines('sh {0}/main.sh reset'.format(tmppath))
 
             if self.sel2:
+                log(self.msg(u'正在执行整机Monkey'))
                 self.adb.shellreadlines('sh {0}/main.sh monkey'.format(tmppath))
                 pid = self.adb.shellreadline('cat {0}/pid.txt'.format(tmppath))
                 self.adb.waitforproc(pid)
+                log(self.msg(u'正在重启'))
                 self.adb.reboot(5)
+                log(self.msg(u'正在抓取正常开机内存信息'))
                 self.adb.shellreadlines('sh {0}/main.sh normal'.format(tmppath))
                 self.adb.kit.disablekeyguard()
 
             if self.sel1 and self.sel3 or self.sel4:
-                if self.main.datatype:
-                    importdata(self.adb, self.main.datatype)
+                if self.inst.datatype:
+                    log(self.msg(u'正在导入用户数据'))
+                    importdata(self.adb, self.inst.datatype)
 
             if self.sel3:
+                log(self.msg(u'正在重启'))
                 self.adb.reboot(5)
                 self.adb.kit.disablekeyguard()
+                log(self.msg(u'正在抓取后台常驻内存信息'))
                 self.adb.shellreadline('sh {0}/main.sh resident'.format(tmppath))
                 pid = self.adb.shellreadline('cat {0}/pid.txt'.format(tmppath))
                 self.adb.waitforproc(pid)
 
             if self.sel4:
+                log(self.msg(u'正在重启'))
                 self.adb.reboot(5)
                 self.adb.kit.disablekeyguard()
+                log(self.msg(u'正在抓取应用内存信息'))
                 self.adb.shellreadline('sh {0}/main.sh memory'.format(tmppath))
                 pid = self.adb.shellreadline('cat {0}/pid.txt'.format(tmppath))
                 self.adb.waitforproc(pid)
 
+        log(self.msg(u'正在导出测试结果'))
         self.adb.pull('{0}/out'.format(tmppath), self.workout)
         time.sleep(3)
 
+        log(self.msg(u'正在分析测试结果'))
         for dirpath, dirnames, names in os.walk(self.workout):
             for name in names:
                 if name == 'meminfo.txt':
@@ -283,3 +296,6 @@ class Executor(object):
                     meminfo(dirpath, name, '正常开机进程及内存占用')
                 elif name == 'meminfo-3.txt':
                     meminfo(dirpath, name, '后台常驻进程及内存占用')
+
+    def msg(self, text):
+        return u'[{0}] {1}'.format(self.title(), text)

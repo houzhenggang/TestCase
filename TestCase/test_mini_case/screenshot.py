@@ -19,9 +19,9 @@ workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
 class Executor(object):
 
-    def __init__(self, main):
-        self.adb = main.adb
-        self.workout = main.workout
+    def __init__(self, adb, workout):
+        self.adb = adb
+        self.workout = workout
 
     def title(self):
         return u'截图比较测试'
@@ -29,7 +29,7 @@ class Executor(object):
     def setup(self):
         pass
 
-    def execute(self):
+    def execute(self, log):
         shutil.rmtree(self.workout, ignore_errors=True)
         if not os.path.exists(self.workout):
             os.mkdir(self.workout)
@@ -45,5 +45,6 @@ class Executor(object):
         time.sleep(3)
         startcompare.main()
         uia.uninstall()
-        
 
+    def msg(self, text):
+        return u'[{0}] {1}'.format(self.title(), text)

@@ -9,10 +9,10 @@ import threading
 
 class Executor(object):
 
-    def __init__(self, main):
-        self.adb = main.adb
-        self.workout = main.workout
-        self.packages = main.packages
+    def __init__(self, adb, workout, packages):
+        self.adb = adb
+        self.workout = workout
+        self.packages = packages
 
     def title(self):
         return u'应用启动时间测试'
@@ -53,10 +53,17 @@ class Executor(object):
         avgval = round(float(sum(values)) / len(values), 1)
         return title, size, sample, minval, maxval, avgval
 
-    def execute(self):
+    def execute(self, log):
+        log(self.msg(u'正在重启'))
         self.adb.reboot(5)
         self.adb.kit.wakeup()
         self.adb.kit.disablekeyguard()
+
+        items = []
+        for key, value in self.packages.items():
+            for activity in value['activities']:
+                if activity.get('category') == 'android.intent.category.LAUNCHER':
+                    items.append((key, activity['title'], activity['name']))
 
         report = open(os.path.join(self.workout, 'launch.csv'), 'wb')
         report.write(codecs.BOM_UTF8)
@@ -65,14 +72,15 @@ class Executor(object):
         titles.extend(['第{0}次'.format(i) for i in range(1, self.count + 1)])
         titles.extend(['最小值', '最大值', '平均值'])
         writer.writerow(titles)
-
-        for key, value in self.packages.items():
-            for activity in value['activities']:
-                if activity.get('category') == 'android.intent.category.LAUNCHER':
-                    r = self.appinfo(key, activity['title'], activity['name'])
-                    values = [r[0], r[1]]
-                    values.extend(r[2])
-                    values.extend([r[3], r[4], r[5]])
-                    writer.writerow(values)
-                    report.flush()
+        for i, (package, title, name) in enumerate(items, 1):
+            log(self.msg(u'正在启动{0} {1}/{2}'.format(title, i, len(items))))
+            r = self.appinfo(package, title, name)
+            values = [r[0], r[1]]
+            values.extend(r[2])
+            values.extend([r[3], r[4], r[5]])
+            writer.writerow(values)
+            report.flush()
         report.close()
+
+    def msg(self, text):
+        return u'[{0}] {1}'.format(self.title(), text)

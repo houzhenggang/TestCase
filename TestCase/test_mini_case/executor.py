@@ -5,6 +5,7 @@ import copy
 import os
 import time
 
+import chart.run as chart
 import common
 import compat
 import memory
@@ -15,12 +16,56 @@ import screenshot
 import stress
 import update
 import uptime
-import chart.run as chart
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 from common import workdir, getconfig, loginaccounts, importdata
+
+class BuildAddDialog(QDialog):
+
+    def __init__(self, parent):
+        super(BuildAddDialog, self).__init__(parent)
+
+        self.initUI()
+
+    def initUI(self):
+        frameStyle = QFrame.Sunken | QFrame.Panel
+
+        self.fileNameEdit = QLineEdit()
+        self.fileNameEdit.setReadOnly(True)
+        self.fileNameButton = QPushButton(u'打开')
+        self.testNameEdit = QLineEdit()
+        self.testNameEdit.setReadOnly(True)
+        self.testVersionEdit = QLineEdit()
+        self.testVersionEdit.setReadOnly(True)
+        self.testParamsEdit = QLineEdit()
+        self.testDescEdit = QTextEdit()
+        self.testDescEdit.setReadOnly(True)
+
+        layout = QGridLayout()
+        layout.addWidget(QLabel(u'文件名'), 0, 0)
+        layout.addWidget(self.fileNameEdit, 0, 1)
+        layout.addWidget(self.fileNameButton, 0, 2)
+        layout.addWidget(QLabel(u'测试名'), 1, 0)
+        layout.addWidget(self.testNameEdit, 1, 1, 1, 2)
+        layout.addWidget(QLabel(u'版本'), 2, 0)
+        layout.addWidget(self.testVersionEdit, 2, 1, 1, 2)
+        layout.addWidget(QLabel(u'参数'), 3, 0)
+        layout.addWidget(self.testParamsEdit, 3, 1, 1, 2)
+        layout.addWidget(QLabel(u'说明'), 4, 0)
+        layout.addWidget(self.testDescEdit, 4, 1, 1, 2)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        mainLayout = QVBoxLayout()
+        mainLayout.addLayout(layout)
+        mainLayout.addWidget(buttonBox)
+        self.setLayout(mainLayout)
+        self.resize(400, 250)
+        self.setWindowTitle(u'添加用例')
 
 class BuildSetupWizard(QWizard):
 
@@ -33,7 +78,7 @@ class BuildSetupWizard(QWizard):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle(u'日常测试设置向导')
+        self.setWindowTitle(u'测试用例设置向导')
         self.currentIdChanged[int].connect(self.pageIdChanged)
         self.addPage(self.createPreparePage())
         self.addPage(self.createSelectPage())
@@ -76,7 +121,7 @@ class BuildSetupWizard(QWizard):
 
         page = QWizardPage()
         page.setTitle(u'测试准备')
-        page.setSubTitle(u'设置测试开始前动作')
+        page.setSubTitle(u'选择测试开始前的准备动作')
 
         self.loginAccountsCheck = QCheckBox(u'登录帐号')
         self.loginAccountsCheck.setChecked(self.parentWidget().login)
@@ -112,7 +157,16 @@ class BuildSetupWizard(QWizard):
     def buttonClicked(self):
         sender = self.sender()
 
-        if sender == self.selallButton:
+        if sender == self.addButton:
+            '''options = QFileDialog.Options()
+            fileName = QFileDialog.getOpenFileName(self, u'添加用例',
+                    getconfig(5), u'压缩文件 (*.zip)')
+            if fileName:
+                print unicode(fileName, 'utf-8')'''
+            dialog = BuildAddDialog(self)
+            if dialog.exec_():
+                pass
+        elif sender == self.selallButton:
             for i in range(self.list.count()):
                 self.list.item(i).setCheckState(Qt.Checked)
         elif sender == self.disallButton:
@@ -131,8 +185,8 @@ class BuildSetupWizard(QWizard):
 
     def createSelectPage(self):
         page = QWizardPage()
-        page.setTitle(u'测试项')
-        page.setSubTitle(u'选择需要测试的项')
+        page.setTitle(u'选择用例')
+        page.setSubTitle(u'选择和添加需要执行的测试用例')
 
         self.list = QListWidget(self)
         for key in self.tempexec.keys():
@@ -142,6 +196,8 @@ class BuildSetupWizard(QWizard):
             self.list.addItem(item)
         self.list.itemChanged.connect(self.itemChanged)
         self.list.currentItemChanged.connect(self.itemChanged)
+        self.addButton = QPushButton(u'添加')
+        self.addButton.clicked.connect(self.buttonClicked)
         self.selallButton = QPushButton(u'全选')
         self.selallButton.clicked.connect(self.buttonClicked)
         self.disallButton = QPushButton(u'反选')
@@ -151,6 +207,7 @@ class BuildSetupWizard(QWizard):
         self.downButton = QPushButton(u'下移')
         self.downButton.clicked.connect(self.buttonClicked)
         buttonBox = QDialogButtonBox(Qt.Vertical)
+        buttonBox.addButton(self.addButton, QDialogButtonBox.ActionRole)
         buttonBox.addButton(self.selallButton, QDialogButtonBox.ActionRole)
         buttonBox.addButton(self.disallButton, QDialogButtonBox.ActionRole)
         buttonBox.addButton(self.upButton, QDialogButtonBox.ActionRole)
@@ -165,7 +222,7 @@ class BuildSetupWizard(QWizard):
 
 class SetupExecuteThread(QThread):
 
-    statusChanged = pyqtSignal(unicode)
+    logged = pyqtSignal(unicode, str)
 
     def __init__(self, adb, **args):
         super(SetupExecuteThread, self).__init__()
@@ -177,34 +234,35 @@ class SetupExecuteThread(QThread):
         self.workout = args.get('workout')
 
     def run(self):
-        self.statusChanged.emit(u'正在唤醒设备')
+        self.log(u'正在设置设备')
         self.adb.kit.wakeup()
-
-        self.statusChanged.emit(u'正在设置屏幕不锁定')
         self.adb.kit.disablekeyguard()
         self.adb.kit.keepscreenon()
 
+        start = time.time()
+
         if self.login:
-            self.statusChanged.emit(u'正在登录预置的应用帐号')
+            self.log(u'正在登录预置的应用帐号')
             loginaccounts(self.adb)
-            self.statusChanged.emit(u'登录预置的应用帐号完成')
 
         if self.datatype:
-            self.statusChanged.emit(u'正在导入预置的用户数据')
+            self.log(u'正在导入预置的用户数据')
             importdata(self.adb, self.datatype)
-            self.statusChanged.emit(u'导入预置的用户数据完成')
 
         if self.executor:
-            self.statusChanged.emit(u'正在执行测试')
-            for key in self.executor.keys():
-                self.executor.get(key).execute()
-            self.statusChanged.emit(u'执行测试完成')
+            for value in self.executor.values():
+                self.log(u'正在执行{0}'.format(value.title()))
+                value.execute(self.log)
 
-            self.statusChanged.emit(u'正在生成报告')
+            self.log(u'正在生成测试报告')
             chart.run(self.workout)
-            self.statusChanged.emit(u'生成报告完成')
 
-class ChildWindow(QTextEdit):
+        self.log(u'所有任务完成，共耗时{0}秒'.format(round(time.time() - start, 3)))
+
+    def log(self, msg, color='black'):
+        self.logged.emit(msg, color)
+
+class ChildWindow(QWidget):
 
     def __init__(self, adb, packages):
         super(ChildWindow, self).__init__()
@@ -212,14 +270,59 @@ class ChildWindow(QTextEdit):
         self.adb = adb
         self.packages = packages
 
+        self.info = collections.OrderedDict()
+        self.info['序列号'] = self.adb.getprop('ro.boot.serialno')
+        self.info['型号'] = self.adb.getprop('ro.product.model')
+        self.info['Android版本'] = self.adb.getprop('ro.build.version.release')
+        self.info['版本号'] = self.adb.getprop('ro.build.display.id')
+        self.info['内部版本'] = self.adb.getprop('ro.build.internal.id')
+        self.info['版本类型'] = self.adb.getprop('ro.build.type')
+        self.info['制造商'] = self.adb.getprop('ro.product.manufacturer')
+        self.info['平台'] = self.adb.getprop('ro.board.platform')
+
+        self.workout = os.path.join(workdir, 'out')
+        if not os.path.exists(self.workout):
+            os.mkdir(self.workout)
+        self.workout = os.path.join(self.workout, self.info['型号'])
+        if not os.path.exists(self.workout):
+            os.mkdir(self.workout)
+        self.workout = os.path.join(self.workout, self.info['版本号'])
+        if not os.path.exists(self.workout):
+            os.mkdir(self.workout)
+
+        self.initUI()
+
+    def initUI(self):
+        self.message = QTextEdit()
+        self.message.setReadOnly(True)
+        self.devinfo = QTableWidget(8, 2)
+        self.devinfo.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.devinfo.setSelectionBehavior(QTableWidget.SelectRows)
+        self.devinfo.setSelectionMode(QTableWidget.SingleSelection)
+        self.devinfo.setAlternatingRowColors(True)
+        self.devinfo.verticalHeader().setVisible(False)
+        self.devinfo.horizontalHeader().setStretchLastSection(True)
+        self.devinfo.horizontalHeader().setVisible(False)
+        for i, (key, value) in enumerate(self.info.items()):
+            self.devinfo.setItem(i, 0, QTableWidgetItem(unicode(key)))
+            self.devinfo.setItem(i, 1, QTableWidgetItem(value))
+
+        splitter1 = QSplitter(Qt.Vertical)
+        splitter1.addWidget(self.devinfo)
+        splitter1.addWidget(self.message)
+
+        layout = QHBoxLayout()
+        layout.addWidget(splitter1)
+        self.setLayout(layout)
+
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle(self.adb.getprop('ro.boot.serialno'))
+        self.setWindowTitle(self.userFriendlyCurrentDevice())
 
     def loginAccounts(self):
         if QMessageBox.question(self, u'登录帐号', u'<p>是否登录预置应用帐号</p><p>如需登录请先切换至英文输入法</p>',
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) == QMessageBox.Yes:
             self.t = SetupExecuteThread(self.adb, login=True)
-            self.t.statusChanged.connect(self.log)
+            self.t.logged.connect(self.log)
             self.t.start()
 
     def importData(self):
@@ -230,50 +333,34 @@ class ChildWindow(QTextEdit):
             item, ok = QInputDialog.getItem(self, u'导入数据', u'选择数据类型：', items, 0, False)
             if ok and item:
                 self.t = SetupExecuteThread(self.adb, datatype=str(item))
-                self.t.statusChanged.connect(self.log)
+                self.t.logged.connect(self.log)
                 self.t.start()
 
     def executeBuildTest(self):
-        workout = os.path.join(workdir, 'out')
-        if not os.path.exists(workout):
-            os.mkdir(workout)
-        workout = os.path.join(workout, self.adb.getprop('ro.product.model'))
-        if not os.path.exists(workout):
-            os.mkdir(workout)
-        workout = os.path.join(workout, self.adb.getprop('ro.build.display.id'))
-        if not os.path.exists(workout):
-            os.mkdir(workout)
-        self.workout = workout
-
         self.executor = collections.OrderedDict()
-        self.executor[0] = update.Executor(self)
-        self.executor[1] = launch.Executor(self)
-        self.executor[2] = scenes.Executor(self)
-        self.executor[3] = monkey.Executor(self)
-        self.executor[4] = compat.Executor(self)
-        self.executor[5] = uptime.Executor(self)
-        self.executor[6] = stress.Executor(self)
-        self.executor[7] = memory.Executor(self)
-        self.executor[8] = screenshot.Executor(self)
+        self.executor[0] = update.Executor(self.adb)
+        self.executor[1] = launch.Executor(self.adb, self.workout, self.packages)
+        self.executor[2] = scenes.Executor(self.adb, self.workout)
+        self.executor[3] = monkey.Executor(self.adb, self.workout, self.packages)
+        self.executor[4] = compat.Executor(self.adb, self.workout)
+        self.executor[5] = uptime.Executor(self.adb, self.workout)
+        self.executor[6] = stress.Executor(self.adb, self.workout)
+        self.executor[7] = memory.Executor(self.adb, self.workout, self.packages, self)
+        self.executor[8] = screenshot.Executor(self.adb, self.workout)
 
         self.login = False
         self.datatype = None
         wizard = BuildSetupWizard(self)
         if wizard.exec_() and self.executor:
-            self.t = SetupExecuteThread(self.adb, executor=self.executor, login=self.login, datatype=self.datatype, workout=self.workout)
-            self.t.statusChanged.connect(self.log)
+            self.t = SetupExecuteThread(self.adb, executor=self.executor, login=self.login,
+                    datatype=self.datatype, workout=self.workout)
+            self.t.logged.connect(self.log)
             self.t.start()
 
-    def executeExtendTest(self):
-        pass
+    def userFriendlyCurrentDevice(self):
+        return self.info.get('序列号')
 
     def log(self, msg, color='black'):
         strft = time.strftime('%Y-%m-%d %H:%M:%S')
         line = u'<font color="{0}">{1} {2}</font>\n'.format(color, strft, msg)
-        self.append(line)
-
-    def loge(self, msg):
-        self.log(msg, 'red')
-
-    def logw(self, msg):
-        self.log(msg, 'yellow')
+        self.message.append(line)

@@ -36,9 +36,9 @@ class StressMonitorThread(threading.Thread):
 
 class Executor(object):
 
-    def __init__(self, main):
-        self.adb = main.adb
-        self.workout = main.workout
+    def __init__(self, adb, workout):
+        self.adb = adb
+        self.workout = workout
 
     def title(self):
         return u'压力测试'
@@ -101,7 +101,7 @@ class Executor(object):
 
         return page
 
-    def execute(self):
+    def execute(self, log):
         stress = os.path.join(self.workout, 'stress.csv')
         if os.path.exists(stress):
             os.remove(stress)
@@ -116,10 +116,12 @@ class Executor(object):
                     extras.append('{0} {1}'.format(param.attrib['extra'], param.text))
 
         if extras:
+            log(self.msg(u'正在安装压力测试APK'))
             tags = self.adb.getprop('ro.build.tags')
             self.adb.install(os.path.join(workdir, 'stress', 'StressTest_{0}.apk'.format(tags)))
             t = StressMonitorThread(self.adb)
             t.start()
+            log(self.msg(u'正在启动压力测试APK'))
             lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(extras)), 'stress.csv', 30)
             t.stop()
             t.join()
@@ -127,6 +129,7 @@ class Executor(object):
             report.write(codecs.BOM_UTF8)
             report.write('{0}{1}'.format(os.linesep.join(lines), os.linesep))
             report.close()
+            log(self.msg(u'正在卸载压力测试APK'))
             self.adb.uninstall('com.ztemt.test.stress')
 
         if pyfunc:
@@ -142,6 +145,7 @@ class Executor(object):
                 es = []
                 for param in item.findall('param'):
                     es.append((param.attrib['extra'], param.text))
+                log(self.msg(u'正在执行{0}'.format(item.attrib['name'])))
                 result = getattr(self, item.find('func').text)(**dict(es))
                 writer.writerow([item.attrib['name'].encode('utf-8'), result[0], result[1] + result[2], result[1], result[2]])
                 report.flush()
@@ -174,3 +178,6 @@ class Executor(object):
                 self.adb.kit.setupwizard()
             self.adb.kit.keepscreenon()
         return loop, success, failure
+
+    def msg(self, text):
+        return u'[{0}] {1}'.format(self.title(), text)

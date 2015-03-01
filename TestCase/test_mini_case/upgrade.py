@@ -46,7 +46,7 @@ if pyqtlib:
 
             self.setLayout(vbox)
             self.resize(250, 120)
-            self.setWindowTitle(u'自动化测试平台升级')
+            self.setWindowTitle(u'自动化测试平台升级程序')
             self.setWindowIcon(QIcon('logo.png'))
 
         def showEvent(self, event):
