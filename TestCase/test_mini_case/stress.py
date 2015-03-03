@@ -70,7 +70,8 @@ class Executor(object):
 
         page = QWizardPage()
         page.setTitle(self.title())
-        page.setSubTitle(u'压力测试说明')
+        page.setSubTitle(u'日常压力测试，在不关闭平台情况下，测试开始后可离线，测试结束后再连接。')
+        page.setFinalPage(True)
 
         tree = QTreeWidget()
         tree.setColumnCount(2)

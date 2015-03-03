@@ -292,7 +292,8 @@ class Executor(object):
     def setup(self):
         page = QWizardPage()
         page.setTitle(self.title())
-        page.setSubTitle(u'Monkey测试说明')
+        page.setSubTitle(u'整机或单模块Monkey测试，测试开始后可离线。')
+        page.setFinalPage(True)
 
         check = QCheckBox(u'继续上一次的Monkey测试')
         check.toggled[bool].connect(self.retryChecked)

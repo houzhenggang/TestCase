@@ -55,6 +55,7 @@ if sys.argv[1] == 'py2exe':
     data_files = []
     data_files.append(('.', [
         'busybox',
+        'main.sh',
         'config.txt',
         'TestKit.apk',
         'automator.jar',

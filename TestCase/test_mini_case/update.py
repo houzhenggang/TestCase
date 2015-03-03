@@ -43,7 +43,8 @@ class Executor(object):
         if os.path.exists(self.rootdir):
             page = QWizardPage()
             page.setTitle(self.title())
-            page.setSubTitle(u'系统升级说明')
+            page.setSubTitle(u'本地升级包下载更新。')
+            page.setFinalPage(True)
 
             label1 = QLabel(u'选择科室')
             self.combo1 = QComboBox()

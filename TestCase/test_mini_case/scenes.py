@@ -33,7 +33,8 @@ class Executor(object):
     def setup(self):
         page = QWizardPage()
         page.setTitle(self.title())
-        page.setSubTitle(u'流畅性测试说明')
+        page.setSubTitle(u'模拟典型用户场景，抓取GPU绘制信息，测试开始后可离线。')
+        page.setFinalPage(True)
 
         check = QCheckBox(u'继续上一次的流畅性测试')
         check.toggled[bool].connect(self.retryChecked)

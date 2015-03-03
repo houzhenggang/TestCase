@@ -150,7 +150,9 @@ class Executor(object):
     def setup(self):
         page = QWizardPage()
         page.setTitle(self.title())
-        page.setSubTitle(u'内存测试说明')
+        page.setSubTitle(u'抓取内存数据，在不关闭平台情况下，测试开始后可离线，测试结束后再连接。'
+                u'开机内存测试需要恢复出厂设置，如果是user版本，需要手动重新打开USB调试。')
+        page.setFinalPage(True)
 
         check = QCheckBox(u'继续上一次的内存测试')
         check.toggled[bool].connect(self.retryChecked)

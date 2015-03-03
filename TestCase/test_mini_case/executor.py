@@ -9,6 +9,7 @@ import chart.run as chart
 import common
 import compat
 import memory
+import module
 import monkey
 import launch
 import scenes
@@ -30,16 +31,16 @@ class BuildAddDialog(QDialog):
         self.initUI()
 
     def initUI(self):
-        frameStyle = QFrame.Sunken | QFrame.Panel
-
         self.fileNameEdit = QLineEdit()
         self.fileNameEdit.setReadOnly(True)
         self.fileNameButton = QPushButton(u'打开')
+        self.fileNameButton.clicked.connect(self.buttonClicked)
         self.testNameEdit = QLineEdit()
         self.testNameEdit.setReadOnly(True)
         self.testVersionEdit = QLineEdit()
         self.testVersionEdit.setReadOnly(True)
         self.testParamsEdit = QLineEdit()
+        self.testParamsEdit.textChanged.connect(self.textChanged)
         self.testDescEdit = QTextEdit()
         self.testDescEdit.setReadOnly(True)
 
@@ -56,16 +57,41 @@ class BuildAddDialog(QDialog):
         layout.addWidget(QLabel(u'说明'), 4, 0)
         layout.addWidget(self.testDescEdit, 4, 1, 1, 2)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
 
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(layout)
-        mainLayout.addWidget(buttonBox)
+        mainLayout.addWidget(self.buttonBox)
         self.setLayout(mainLayout)
         self.resize(400, 250)
         self.setWindowTitle(u'添加用例')
+
+    def buttonClicked(self):
+        sender = self.sender()
+
+        if sender == self.fileNameButton:
+            filename = QFileDialog.getOpenFileName(self, u'添加用例',
+                    getconfig(5), u'压缩文件 (*.zip)')
+            if filename:
+                self.fillContent(filename)
+
+    def fillContent(self, filename):
+        self.fileNameEdit.setText(filename)
+        self.filename = str(filename)
+        info = module.parse(self.filename)
+        self.testname = info.get('name', '')
+        self.testNameEdit.setText(self.testname)
+        self.testVersionEdit.setText(info.get('version', ''))
+        self.params = ''
+        self.testParamsEdit.clear()
+        self.testDescEdit.setText(info.get('desc', ''))
+        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True if info else False)
+
+    def textChanged(self, text):
+        self.params = text
 
 class BuildSetupWizard(QWizard):
 
@@ -121,7 +147,8 @@ class BuildSetupWizard(QWizard):
 
         page = QWizardPage()
         page.setTitle(u'测试准备')
-        page.setSubTitle(u'选择测试开始前的准备动作')
+        page.setSubTitle(u'选择测试开始前的准备动作。')
+        page.setFinalPage(True)
 
         self.loginAccountsCheck = QCheckBox(u'登录帐号')
         self.loginAccountsCheck.setChecked(self.parentWidget().login)
@@ -158,14 +185,17 @@ class BuildSetupWizard(QWizard):
         sender = self.sender()
 
         if sender == self.addButton:
-            '''options = QFileDialog.Options()
-            fileName = QFileDialog.getOpenFileName(self, u'添加用例',
-                    getconfig(5), u'压缩文件 (*.zip)')
-            if fileName:
-                print unicode(fileName, 'utf-8')'''
             dialog = BuildAddDialog(self)
             if dialog.exec_():
-                pass
+                key = max(self.tempexec.keys()) + 1
+                self.tempexec[key] = module.Executor(self.parentWidget().adb,
+                        self.parentWidget().workout, dialog.testname,
+                        dialog.filename, dialog.params)
+                item = QListWidgetItem(self.tempexec.get(key).title())
+                item.setCheckState(Qt.Unchecked)
+                item.setData(1, QVariant(key))
+                self.list.addItem(item)
+                self.list.setCurrentItem(item)
         elif sender == self.selallButton:
             for i in range(self.list.count()):
                 self.list.item(i).setCheckState(Qt.Checked)
@@ -186,7 +216,8 @@ class BuildSetupWizard(QWizard):
     def createSelectPage(self):
         page = QWizardPage()
         page.setTitle(u'选择用例')
-        page.setSubTitle(u'选择和添加需要执行的测试用例')
+        page.setSubTitle(u'选择和添加需要执行的测试用例。')
+        page.setFinalPage(True)
 
         self.list = QListWidget(self)
         for key in self.tempexec.keys():
