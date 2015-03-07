@@ -14,17 +14,15 @@ import compat  #读取compat/compatibility/launch
 import launch
 import uptime
 import allreader       #整机monkey读取monkey下gfxinfo/monkeyinfo
-import alonereader
 import alonemonkey
-import alonemonkey1
-import reader2      #读取scens下gfxinfo
-import Monkeygpuchart
-import Monkeymemchart
-import Scenesgpuchart
-import ScenesLogLink
+import monkeygfx
+import monkeygpuchart
+import monkeymemchart
+import scenesgpuchart
 import memory
 import memchart
 import skinfo
+import gfxinfo
 import hypelink     #超链接生成
 
 def run(workout):
@@ -42,20 +40,40 @@ def run(workout):
                   
       except KeyboardInterrupt:
             pass
-                  
+      
       try:
-            if os.path.exists(os.path.join(workdir, 'stress.csv')):
-                  stress.main(workdir, name)
+            if os.path.exists(os.path.join(workdir, 'scenes')):                  
+                  scenesgpuchart.main(workdir)
+                  gfxinfo.main(workdir, name)
+                  skinfo.main(workdir, name)                    
       except KeyboardInterrupt:
             pass
-      
       try:
             if os.path.exists(os.path.join(workdir, 'memory')):
                   memory.main(workdir, name)
                   memchart.getData(workdir)
       except KeyboardInterrupt:
             pass
-      
+
+      try:
+            if os.path.exists(os.path.join(workdir, 'monkey')):
+                  if os.path.exists(os.path.join(os.path.join(workdir, 'monkey'), 'monkey.csv')):
+                        allreader.main(workdir, name)
+                  else:
+                        monkeygpuchart.main(workdir)
+                        monkeymemchart.getData(workdir)
+                        alonemonkey.main(workdir, name)
+                        monkeygfx.main(workdir, name)
+
+      except KeyboardInterrupt:
+            pass
+                  
+      try:
+            if os.path.exists(os.path.join(workdir, 'stress.csv')):
+                  stress.main(workdir, name)
+      except KeyboardInterrupt:
+            pass
+            
       try:
             if os.path.exists(os.path.join(workdir, 'compat.csv')):
                   compat.main(workdir, name)
@@ -72,30 +90,7 @@ def run(workout):
             if os.path.exists(os.path.join(workdir, 'uptime.csv')):
                   uptime.main(workdir, name)
       except KeyboardInterrupt:
-            pass
-      
-      try:
-            if os.path.exists(os.path.join(workdir,'scenes')):                  
-                  reader2.main(workdir, name)
-                  skinfo.main(workdir, name)
-                  Scenesgpuchart.main(workdir)
-                  
-      except KeyboardInterrupt:
-            pass
-      
-      try:
-            if os.path.exists(os.path.join(workdir, 'monkey')):
-                  if os.path.exists(os.path.join(os.path.join(workdir, 'monkey'), 'monkey.csv')):
-                        allreader.main(workdir, name)
-                  else:
-                        alonereader.main(workdir, name)
-                        alonemonkey.main(workdir, name)
-                        alonemonkey1.main(workdir, name)
-                        Monkeygpuchart.main(workdir)
-                        Monkeymemchart.getData(workdir)
-      except KeyboardInterrupt:
-            pass
-      
+            pass      
       try:
             hypelink.main(workdir, name)
             print 'ok'
@@ -108,7 +103,3 @@ def run(workout):
 
       
             
-            
-
-
-      

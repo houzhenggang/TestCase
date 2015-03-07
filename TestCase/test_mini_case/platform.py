@@ -92,6 +92,7 @@ class MainWindow(QMainWindow):
 
         self.createActions()
         self.createMenus()
+        self.createToolBars()
         self.createStatusBar()
         self.updateMenus()
 
@@ -181,6 +182,7 @@ class MainWindow(QMainWindow):
         self.loginAccountsAct.setEnabled(hasMdiChild)
         self.importDataAct.setEnabled(hasMdiChild)
         self.buildTestAct.setEnabled(hasMdiChild)
+        self.backupRestoreAct.setEnabled(hasMdiChild)
         self.separatorAct.setVisible(hasMdiChild)
 
     def updateWindowMenu(self):
@@ -217,23 +219,26 @@ class MainWindow(QMainWindow):
         return mdiChild
 
     def createActions(self):
-        self.connectDeviceAct = QAction(u'连接设备', self,
+        self.connectDeviceAct = QAction(QIcon('./images/android.png'), u'连接设备', self,
                 shortcut='Ctrl+C',
                 statusTip=u'连接在线的设备',
                 triggered=self.connectDevice)
 
-        self.loginAccountsAct = QAction(u'登录帐号', self,
+        self.loginAccountsAct = QAction(QIcon('./images/lock.png'), u'登录帐号', self,
                 shortcut='Ctrl+L',
                 statusTip=u'登录预置的应用帐号',
                 triggered=self.loginAccounts)
-        self.importDataAct = QAction(u'导入数据', self,
+        self.importDataAct = QAction(QIcon('./images/data.png'), u'导入数据', self,
                 shortcut='Ctrl+I',
                 statusTip=u'导入预置的用户数据',
                 triggered=self.importData)
-        self.buildTestAct = QAction(u'测试用例', self,
+        self.buildTestAct = QAction(QIcon('./images/run.png'), u'测试用例', self,
                 shortcut='Ctrl+X',
                 statusTip=u'执行内置及扩展的测试用例',
                 triggered=self.executeBuildTest)
+
+        self.backupRestoreAct = QAction(u'备份还原', self,
+                statusTip=u'备份还原存储卡')
 
         self.closeAct = QAction("Cl&ose", self,
                 statusTip="Close the active window",
@@ -276,6 +281,9 @@ class MainWindow(QMainWindow):
         self.runMenu.addSeparator()
         self.runMenu.addAction(self.buildTestAct)
 
+        self.toolMenu = self.menuBar().addMenu(u'工具(&T)')
+        self.toolMenu.addAction(self.backupRestoreAct)
+
         self.windowMenu = self.menuBar().addMenu(u'窗口(&W)')
         self.updateWindowMenu()
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
@@ -285,6 +293,15 @@ class MainWindow(QMainWindow):
         self.helpMenu.addSeparator()
         self.helpMenu.addAction(self.aboutAct)
         self.helpMenu.addAction(self.aboutQtAct)
+
+    def createToolBars(self):
+        self.deviceToolBar = self.addToolBar('Device')
+        self.deviceToolBar.addAction(self.connectDeviceAct)
+
+        self.runToolBar = self.addToolBar('Run')
+        self.runToolBar.addAction(self.loginAccountsAct)
+        self.runToolBar.addAction(self.importDataAct)
+        self.runToolBar.addAction(self.buildTestAct)
 
     def createStatusBar(self):
         self.statusLabel = QLabel()

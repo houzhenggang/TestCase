@@ -7,7 +7,9 @@ import xlwt
 
 from xlutils.copy import copy 
 from xlrd import open_workbook 
-from xlwt import easyxf 
+from xlwt import easyxf
+
+import setfont
 
 
 class UpTime(object):
@@ -28,13 +30,13 @@ class UpTime(object):
     def getuptime(self, path, name):
         #初始化样式
         style = xlwt.XFStyle()
-        #为样式创建字体
-        font = xlwt.Font()
-        font.name = 'Times New Roman'
-        font.height = 220
-        font.bold = True
+        style1 = xlwt.XFStyle()
+
+        f = setfont.Font(0, 220)
+        f1 = setfont.Font(4, 300)
+        style.font = f.fontset(0, 220)
+        style1.font = f1.fontset(4, 300)
         
-        style.font = font
         work_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
         chart_dir = os.path.join(work_dir, 'chart')
         
@@ -42,14 +44,15 @@ class UpTime(object):
             reboot = self.getmonkeydata(os.path.join(path, 'uptime.csv'))
             rb = open_workbook(os.path.join(path, '('+name+')'+'performance.xls'), formatting_info=True)
             wb = copy(rb)
-            w_sheet6 = wb.get_sheet(6)
-
+            w_sheet = wb.add_sheet('uptime')
+            w_sheet.write(0, 0, u'开始时间测试报告', style1)
+            
             for i in range(0, 10):
-                w_sheet6.col(i).width = 0x0d00 + 2000
+                w_sheet.col(i).width = 0x0d00 + 2000
             
             try:                
                 for i in range(len(reboot)):
-                    w_sheet6.write(i, 0, reboot[i][0].decode('UTF-8'), style)
+                    w_sheet.write(i+1, 0, reboot[i][0].decode('UTF-8'), style)
             except IndexError:
                 pass
         

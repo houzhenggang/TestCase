@@ -42,8 +42,7 @@ class Executor(object):
         workout = os.path.join(self.workout, 'extras')
         if not os.path.exists(workout):
             os.mkdir(workout)
-        suffix = unicode(self.filename, 'utf-8')[len(getconfig(5)) + 1:]
-        workout = os.path.join(workout, os.path.splitext(suffix)[0])
+        workout = os.path.join(workout, self.testname.encode('gb2312'))
         shutil.rmtree(workout, ignore_errors=True)
         if not os.path.exists(workout):
             os.makedirs(workout)
@@ -75,7 +74,7 @@ class Executor(object):
         self.adb.push(os.path.join(workdir, 'busybox'), tmppath)
         self.adb.shell('chmod 755 {0}/busybox'.format(tmppath))
         self.adb.push(os.path.join(workdir, 'main.sh'), tmppath)
-        self.adb.push(workout.encode('gb2312'), tmppath)
+        self.adb.push(workout, tmppath)
         self.adb.shell('chmod 755 {0}/*.sh'.format(tmppath))
 
         shutil.rmtree(workout, ignore_errors=True)
@@ -89,7 +88,7 @@ class Executor(object):
         self.adb.shellreadlines('sh {0}/main.sh exit {0} {0}/out'.format(tmppath))
 
         log(self.msg(u'正在导出测试结果'))
-        self.adb.pull('{0}/out'.format(tmppath), workout.encode('gb2312'))
+        self.adb.pull('{0}/out'.format(tmppath), workout)
 
     def msg(self, text):
         return u'[{0}] {1}'.format(self.title(), text)

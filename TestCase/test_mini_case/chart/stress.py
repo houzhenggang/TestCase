@@ -9,6 +9,8 @@ from xlutils.copy import copy
 from xlrd import open_workbook 
 from xlwt import easyxf
 
+import setfont
+
 #读取stress数据
 class Stress(object):
       
@@ -33,20 +35,23 @@ class Stress(object):
                   pass
             return data
       
-      def getstress(self, path, name):
-            #初始化字体样式    
+      def getstress(self, path, name):           
+            f = setfont.Font(0, 250)
+            f1 = setfont.Font(4, 300)
+            
             style = xlwt.XFStyle()
-            #为样式创建字体
-            font = xlwt.Font()
-            font.name = 'Times New Roman'
-            font.height = 250
-            font.bold = True
-            style.font = font
+            style1 = xlwt.XFStyle()
+            
+            style.font = f.fontset(0, 250)
+            style1.font = f.fontset(4, 300)
+            
             try:
                   stress = self.getstressdata(path)     
                   rb = open_workbook(os.path.join(path, '('+name+')'+'performance.xls'), formatting_info=True)       
                   wb = copy(rb) 
-                  w_sheet = wb.get_sheet(10)
+                  w_sheet = wb.add_sheet('stress')
+                  w_sheet.write(0, 0, u'压力测试报告', style1)
+                  
             except KeyboardInterrupt:
                   pass
             try:                  

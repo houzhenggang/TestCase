@@ -44,7 +44,7 @@ def write_to_excel(path, name):
       rb = open_workbook(os.path.join(filepath, '('+name+')'+'performance.xls'), formatting_info=True)
       r_sheet = rb.sheet_by_index(0) 
       wb = copy(rb) 
-      w_sheet2 = wb.get_sheet(2)
+      w_sheet2 = wb.add_sheet('monkey')
       
       for i in range(0,8):
             w_sheet2.col(i).width = 0x0d00 + 2000

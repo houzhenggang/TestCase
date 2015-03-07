@@ -75,7 +75,8 @@ if sys.argv[1] == 'py2exe':
     data_files.append(('scenes', glob(join('scenes', '*'))))
     data_files.append(('stress', glob(join('stress', '*'))))
     data_files.append(('update', glob(join('update', '*'))))
-    data_files.append(('screenshot',glob(join('screenshot', '*'))))
+    data_files.append(('screenshot', glob(join('screenshot', '*'))))
+    data_files.append(('images', glob(join('images', '*'))))
 
     # add matplotlib data files
     #data_files.extend(matplotlib.get_py2exe_datafiles())

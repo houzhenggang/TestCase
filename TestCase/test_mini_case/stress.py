@@ -2,7 +2,9 @@
 
 import codecs
 import csv
+import glob
 import os
+import random
 import sys
 import threading
 import time
@@ -178,6 +180,57 @@ class Executor(object):
                 success += 1
                 self.adb.kit.setupwizard()
             self.adb.kit.keepscreenon()
+        return loop, success, failure
+
+    def diskreadwrite(self, **args):
+        loop = int(args['loop'])
+        success = failure = 0
+        with open(os.path.join(workdir, 'stress', 'config.txt'), 'r') as f:
+            resdir = f.readlines()[1].strip()
+        diskdir = '/sdcard/disktest'
+        self.adb.shell('mkdir -p {0}'.format(diskdir))
+        self.adb.push(resdir.encode('gb2312'), diskdir)
+        for i in range(loop):
+            passed = True
+
+            for size in [2, 3]:
+                lines = self.adb.shellreadlines('ls -l {0}'.format(diskdir))
+                lines = random.sample(lines, size)
+                size1 = []
+                for j in range(size):
+                    array = lines[j].split()
+                    size1.append(long(array[3]))
+                    self.adb.shell('rm -rf {0}/{1}'.format(diskdir, array[6].strip()))
+                set1 = set(size1)
+
+                while True:
+                    files = glob.glob(os.path.join(resdir.encode('gb2312'), '*'))
+                    files = random.sample(files, size)
+                    size2 = []
+                    for file in files:
+                        size2.append(os.path.getsize(file))
+                    set2 = set(size2)
+                    if len(set1.intersection(set2)) < size:
+                        break
+
+                size3 = []
+                for j, file in enumerate(files):
+                    filepath = '{0}/{1}-{2}-{3}-{4}'.format(diskdir, i, size, j, os.path.basename(file))
+                    self.adb.push(file, filepath)
+                    line = self.adb.shellreadline('ls -l {0}'.format(filepath))
+                    size3.append(long(line.split()[3]))
+                set3 = set(size3)
+
+                if set2 != set3:
+                    passed = False
+                    break
+
+            if passed:
+                success += 1
+            else:
+                failure += 1
+
+        self.adb.shell('rm -rf {0}'.format(diskdir))
         return loop, success, failure
 
     def msg(self, text):

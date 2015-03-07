@@ -11,7 +11,7 @@ import matplotlib.backends
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import savefig
 
-import Scenesgpuchart
+import scenesgpuchart
     
 def getmonkeydata(path):
     rootdir = os.path.join(path, 'monkey')
@@ -24,7 +24,7 @@ def getmonkeydata(path):
                 reader = csv.reader((line.replace('\0', '')for line in csvfile), delimiter = ",")
                 for line in reader:
                     data.append(line)
-                makechart = Scenesgpuchart.MakeGPUChart(name, data)
+                makechart = scenesgpuchart.MakeGPUChart(name, data)
                 makechart.makechart(name, data)
                 
 def main(path):

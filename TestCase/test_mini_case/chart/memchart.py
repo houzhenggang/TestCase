@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import savefig
 import sys
 
-def makeChart(path,data):
+def makeChart(path, data):
     filepath = path
     #set Agg for save picture
      
@@ -45,30 +45,30 @@ def makeChart(path,data):
     try:
         if length >10:        
             #declare a figure object to plot
-            fig = plt.figure(figsize=(16,12))
+            fig = plt.figure(figsize=(16, 12))
             
             #plot chart
-            plt.plot(standard,label = 'average',color = 'k',linewidth=2)
-            plt.plot(psstotal,label = 'psstotal',color = 'r')
-            plt.plot(pssprivate,label = 'pssprivate',color = 'g') 
-            plt.plot(dalvikheap,label = 'dalvikheap',color = 'b')
-            plt.plot(dalvikused,label = 'dalvikused',color = 'y')
-            plt.plot(nativeheap,label = 'nativeheap',color = 'm')
-            plt.plot(nativeused,label = 'nativeused',color = 'c')
+            plt.plot(standard, label = 'average', color = 'k', linewidth=2)
+            plt.plot(psstotal, label = 'psstotal', color = 'r')
+            plt.plot(pssprivate, label = 'pssprivate', color = 'g') 
+            plt.plot(dalvikheap, label = 'dalvikheap', color = 'b')
+            plt.plot(dalvikused, label = 'dalvikused', color = 'y')
+            plt.plot(nativeheap, label = 'nativeheap', color = 'm')
+            plt.plot(nativeused, label = 'nativeused', color = 'c')
             
-            plt.xlabel(u'次数(单位：2S)',fontproperties='SimHei')
+            plt.xlabel(u'次数(单位：2S)', fontproperties='SimHei')
             #plt.ylabel('Memory')
             plt.xlim(0.0,len(data))
-            plt.ylabel(u'内存大小(单位：KB)',fontproperties='SimHei')
+            plt.ylabel(u'内存大小(单位：KB)', fontproperties='SimHei')
             plt.grid(True)
             #advance settings
-            plt.title(u'内存占用',fontproperties='SimHei')
+            plt.title(u'launcher 内存占用', fontproperties='SimHei')
             #show the figure
-            plt.legend(loc=2,bbox_to_anchor=(1.01,1.00),borderaxespad=0.)
+            plt.legend(loc=2, bbox_to_anchor=(1.01,1.00), borderaxespad=0.)
             plt.legend()
             #save chart
             workdir = os.path.dirname(sys.argv[0])
-            plt.savefig(os.path.join(filepath,'meminfo.png'))
+            plt.savefig(os.path.join(filepath, 'meminfo.png'))
             #plt.show()
         else:
             print 'memory data lack'
@@ -77,17 +77,17 @@ def makeChart(path,data):
     
 def getData(path):
     filepath = path
-    rootdir = os.path.join(filepath,'memory')
-    filenames = glob.glob(os.path.join(rootdir,'*'))
+    rootdir = os.path.join(filepath, 'memory')
+    filenames = glob.glob(os.path.join(rootdir, '*'))
     for name in filenames:
         data = []
         if os.path.isdir(name):
-            if os.path.exists(os.path.join(name,'应用内存占用.csv')):
-                csvfile = file(os.path.join(name,'应用内存占用.csv'),'rb')
-                reader = csv.reader((line.replace('\0','')for line in csvfile),delimiter = ",")
+            if os.path.exists(os.path.join(name, '应用内存占用.csv')):
+                csvfile = file(os.path.join(name, '应用内存占用.csv'), 'rb')
+                reader = csv.reader((line.replace('\0', '')for line in csvfile), delimiter = ',')
                 for line in reader:
                     data.append(line)
-                makeChart(name,data)
+                makeChart(name, data)
             else:
                 pass
         

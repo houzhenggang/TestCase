@@ -136,4 +136,9 @@
         <desc>恢复出厂设置，请使用调试版本</desc>
         <func>masterclear</func>
     </item>
+    <item name="磁盘读写测试" type="pyf">
+        <param name="次数" extra="loop" type="int">10</param>
+        <desc>随机从设备上拷贝删除文件</desc>
+        <func>diskreadwrite</func>
+    </item>
 </root>

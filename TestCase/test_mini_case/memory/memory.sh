@@ -25,5 +25,6 @@ do
             kill ${nid}
         fi
         kill ${mid}
+        uiautomator runtest automator.jar -c com.android.systemui.SystemDebugTestCase\#testDumpHprof -e filename ${packout}/monkey.hprof
     fi
 done < ${workdir}/mempkgs.txt

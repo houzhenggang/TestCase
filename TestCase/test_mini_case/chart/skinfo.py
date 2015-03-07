@@ -33,7 +33,7 @@ class Skiinfo(object):
                               if len(data) > 0:
                                     gfx_data.append(self.gfxcalculate(data))                                    
                               else:
-                                    print 'no data'
+                                    gfx_data.append(0)
                   csv_file.close()
             self.writetoexcel(path, pname, gfx_data)
                                     
@@ -71,7 +71,7 @@ class Skiinfo(object):
                   w_sheet.col(i).width = 0x0d00 + 2000
                   
             for i in range(len(data)):
-                  w_sheet.write(i+1, 2, data[i], style)
+                  w_sheet.write(i+2, 2, data[i], style)
             wb.save(os.path.join(path,'('+pname+')'+'performance.xls'))
       
 def main(path,name):
