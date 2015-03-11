@@ -182,7 +182,6 @@ class MainWindow(QMainWindow):
         self.loginAccountsAct.setEnabled(hasMdiChild)
         self.importDataAct.setEnabled(hasMdiChild)
         self.buildTestAct.setEnabled(hasMdiChild)
-        self.backupRestoreAct.setEnabled(hasMdiChild)
         self.separatorAct.setVisible(hasMdiChild)
 
     def updateWindowMenu(self):
@@ -237,9 +236,6 @@ class MainWindow(QMainWindow):
                 statusTip=u'执行内置及扩展的测试用例',
                 triggered=self.executeBuildTest)
 
-        self.backupRestoreAct = QAction(u'备份还原', self,
-                statusTip=u'备份还原存储卡')
-
         self.closeAct = QAction("Cl&ose", self,
                 statusTip="Close the active window",
                 triggered=self.mdiArea.closeActiveSubWindow)
@@ -280,9 +276,6 @@ class MainWindow(QMainWindow):
         self.runMenu.addAction(self.importDataAct)
         self.runMenu.addSeparator()
         self.runMenu.addAction(self.buildTestAct)
-
-        self.toolMenu = self.menuBar().addMenu(u'工具(&T)')
-        self.toolMenu.addAction(self.backupRestoreAct)
 
         self.windowMenu = self.menuBar().addMenu(u'窗口(&W)')
         self.updateWindowMenu()

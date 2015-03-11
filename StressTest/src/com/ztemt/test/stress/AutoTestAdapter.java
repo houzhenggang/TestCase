@@ -35,6 +35,7 @@ import com.ztemt.test.stress.item.NetworkTest;
 import com.ztemt.test.stress.item.NetworkTest2;
 import com.ztemt.test.stress.item.NetworkTest3;
 import com.ztemt.test.stress.item.NfcTest;
+import com.ztemt.test.stress.item.PowerOnOffTest;
 import com.ztemt.test.stress.item.PressureSensorTest;
 import com.ztemt.test.stress.item.ProximitySensorTest;
 import com.ztemt.test.stress.item.RebootTest;
@@ -91,6 +92,7 @@ public class AutoTestAdapter extends BaseAdapter {
                 new HumiditySensorTest(context),
                 new TemperatureSensorTest(context),
                 new RebootTest(context),
+                new PowerOnOffTest(context),
                 //new RecoveryTest(context),
                 new NetworkTest(context),
                 new BasebandVersionTest(context),

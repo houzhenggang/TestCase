@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -17,6 +19,8 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.Environment;
+import android.os.FileObserver;
 import android.os.IBinder;
 import android.os.RemoteException;
 
@@ -31,6 +35,24 @@ public class TestKitService extends Service {
         public void notifyStop(byte[] bytes, String filename)
                 throws RemoteException {
             write(bytes, getFileStreamPath(filename));
+        }
+    };
+
+    private Set<String> mObserverDirs = new HashSet<String>();
+
+    private RecursiveFileObserver mObserver = new RecursiveFileObserver(
+            Environment.getExternalStorageDirectory().getAbsolutePath()) {
+
+        @Override
+        public void onEvent(int event, String path) {
+            switch (event) {
+            case FileObserver.DELETE:
+                mObserverDirs.add(new File(path).getParent());
+                break;
+            default:
+                super.onEvent(event, path);
+                break;
+            }
         }
     };
 
@@ -59,6 +81,10 @@ public class TestKitService extends Service {
                 enableKeyguard(false);
             } else if ("enableKeyguard".equals(command)) {
                 enableKeyguard(true);
+            } else if ("startWatching".equals(command)) {
+                startWatching();
+            } else if ("stopWatching".equals(command)) {
+                stopWatching();
             }
         }
         return START_NOT_STICKY;
@@ -109,13 +135,19 @@ public class TestKitService extends Service {
         write(jobj.toString(), file);
     }
 
-    private static void write(String line, File file) {
+    private static void write(String[] lines, File file) {
         BufferedWriter bw = null;
         try {
             FileWriter fw = new FileWriter(file, false);
             bw = new BufferedWriter(fw);
             bw.write(System.currentTimeMillis() + "\n");
-            bw.write(line);
+            for (int i = 0; i < lines.length; i++) {
+                if (i == 0) {
+                    bw.write(lines[i]);
+                } else {
+                    bw.write("\n" + lines[i]);
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -128,6 +160,10 @@ public class TestKitService extends Service {
             }
         }
         file.setReadable(true, false);
+    }
+
+    private static void write(String line, File file) {
+        write(new String[] { line }, file);
     }
 
     private static void write(byte[] bytes, File file) {
@@ -161,5 +197,16 @@ public class TestKitService extends Service {
         } else {
             mKeyguardLock.disableKeyguard();
         }
+    }
+
+    private void startWatching() {
+        mObserver.startWatching();
+    }
+
+    private void stopWatching() {
+        mObserver.stopWatching();
+        String[] dirs = mObserverDirs.toArray(new String[mObserverDirs.size()]);
+        write(dirs, getFileStreamPath("observer"));
+        mObserverDirs.clear();
     }
 }

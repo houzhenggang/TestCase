@@ -7,13 +7,13 @@ import time
 
 import chart.run as chart
 import common
+import compar
 import compat
 import memory
 import module
 import monkey
 import launch
 import scenes
-import screenshot
 import stress
 import update
 import uptime
@@ -377,7 +377,7 @@ class ChildWindow(QWidget):
         self.executor[5] = uptime.Executor(self.adb, self.workout)
         self.executor[6] = stress.Executor(self.adb, self.workout)
         self.executor[7] = memory.Executor(self.adb, self.workout, self.packages, self)
-        self.executor[8] = screenshot.Executor(self.adb, self.workout)
+        self.executor[8] = compar.Executor(self.adb, self.workout)
 
         self.login = False
         self.datatype = None

@@ -13,15 +13,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.ztemt.test.stress.R;
 
 public class FileSystemTest extends BaseTest {
-
-    private static final String LOG_TAG = "FileSystemTest";
-    private static final String[] FILE_PARTITIONS = { "/data" };
-    private static final int[] RAW_RES_IDS = { R.raw.test };
 
     public FileSystemTest(Context context) {
         super(context);
@@ -29,16 +24,22 @@ public class FileSystemTest extends BaseTest {
 
     @Override
     public void onRun() {
-        for (String name : FILE_PARTITIONS) {
-            for (int i = 0; i < RAW_RES_IDS.length; i++) {
-                if (!verifyFilePartition(RAW_RES_IDS[i], name)) {
-                    Log.e(LOG_TAG, "Verify(" + i + ", " + name + ") fail");
-                    setFailure();
-                    return;
-                }
-            }
+        File source = new File(mContext.getExternalFilesDir(""), "test");
+        File target = new File("/data", "test");
+        boolean success = false;
+
+        if (copy(source, target)) {
+            String str1 = getFileDigest(source);
+            String str2 = getFileDigest(target);
+            success = str1 != null && str2 != null && str1.equals(str2);
+            target.delete();
         }
-        setSuccess();
+
+        if (success) {
+            setSuccess();
+        } else {
+            setFailure();
+        }
     }
 
     @Override
@@ -46,28 +47,17 @@ public class FileSystemTest extends BaseTest {
         return mContext.getString(R.string.file_system_test);
     }
 
-    private boolean verifyFilePartition(int rawId, String name) {
-        String str1 = getFileDigest(rawId);
-        File file = new File(name, "test.mp3");
-        if (copyFileFromRaw(rawId, file)) {
-            String str2 = getFileDigest(file);
-            file.delete();
-            return str1 != null && str2 != null && str1.equals(str2);
-        }
-
-        Log.e(LOG_TAG, "Copy raw file failed");
-        return false;
-    }
-
-    private boolean copyFileFromRaw(int rawId, File dest) {
-        InputStream is = mContext.getResources().openRawResource(rawId);
-        OutputStream os = null;
+    private boolean copy(File source, File target) {
         int length = 1024;
         int size;
         byte[] buffer = new byte[length];
 
+        InputStream is = null;
+        OutputStream os = null;
+
         try {
-            os = new FileOutputStream(dest);
+            is = new FileInputStream(source);
+            os = new FileOutputStream(target);
             while ((size = is.read(buffer, 0, length)) != -1) {
                 os.write(buffer, 0, size);
             }
@@ -78,7 +68,6 @@ public class FileSystemTest extends BaseTest {
             if (os != null) {
                 try {
                     os.close();
-                    os = null;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -86,16 +75,11 @@ public class FileSystemTest extends BaseTest {
             if (is != null) {
                 try {
                     is.close();
-                    is = null;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
-    }
-
-    private String getFileDigest(int rawId) {
-        return getFileDigest(mContext.getResources().openRawResource(rawId));
     }
 
     private String getFileDigest(File file) {

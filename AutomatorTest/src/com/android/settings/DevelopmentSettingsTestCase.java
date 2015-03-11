@@ -28,7 +28,7 @@ public class DevelopmentSettingsTestCase extends AutomatorTestCase {
                     LinearLayout.class).index(i));
             UiObject tv = ll.getChild(new UiSelector().className(
                     TextView.class).index(0));
-            if (tv.getText().equals("不锁定屏幕")) {
+            if (tv.getText().matches("^(不锁定屏幕|Stay awake)$")) {
                 UiObject cb = ll.getChild(new UiSelector().resourceId(
                         "android:id/checkbox"));
                 if (cb.isCheckable() && !cb.isChecked()) {
@@ -43,8 +43,14 @@ public class DevelopmentSettingsTestCase extends AutomatorTestCase {
         String text = "adb shell dumpsys gfxinfo";
         UiScrollable list = new UiScrollable(new UiSelector().className(ListView.class));
         list.setAsVerticalList();
-        UiObject item = list.getChildByText(new UiSelector().resourceId(
-                "android:id/title"), "GPU 呈现模式分析", true);
+        UiObject item;
+        try {
+            item = list.getChildByText(new UiSelector().resourceId("android:id/title"),
+                    "GPU 呈现模式分析", true);
+        } catch (UiObjectNotFoundException e) {
+            item = list.getChildByText(new UiSelector().resourceId("android:id/title"),
+                    "Profile GPU rendering", true);
+        }
         item.click();
         UiObject option = new UiObject(new UiSelector().textContains(text));
         option.click();

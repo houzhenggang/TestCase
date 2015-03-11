@@ -36,6 +36,7 @@
     <string name="humidity_sensor_test">湿度传感器测试</string>
     <string name="temperature_sensor_test">温度传感器测试</string>
     <string name="reboot_test">重启测试</string>
+    <string name="power_on_off_test">开关机测试</string>
     <string name="recovery_test">恢复出厂设置测试</string>
     <string name="network_test">开机搜网测试</string>
     <string name="network_test2">网络搜索测试</string>

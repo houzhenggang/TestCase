@@ -7,10 +7,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.SystemClock;
 
 import com.ztemt.test.stress.R;
+import com.ztemt.test.stress.util.PreferenceUtils;
 
 public class SleepWakeTest extends BaseTest {
 
@@ -21,9 +23,11 @@ public class SleepWakeTest extends BaseTest {
     private KeyguardManager.KeyguardLock mKeyguardLock;
     private PowerManager.WakeLock mWakeLock;
     private PowerManager mPowerManager;
+    private PreferenceUtils mPrefUtils;
 
     public SleepWakeTest(Context context) {
         super(context);
+        mPrefUtils = new PreferenceUtils(context);
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
     }
 
@@ -47,7 +51,7 @@ public class SleepWakeTest extends BaseTest {
     public void onRun() {
         registerReceiver();
         goToSleep();
-        wakeUp(5000);
+        wakeUp(getSleepTime());
         pause();
         unregisterReceiver();
     }
@@ -55,6 +59,14 @@ public class SleepWakeTest extends BaseTest {
     @Override
     public String getTitle() {
         return mContext.getString(R.string.sleep_wake_test);
+    }
+
+    @Override
+    public void setExtras(Bundle bundle) {
+        super.setExtras(bundle);
+        if (bundle != null && bundle.containsKey("sleeptime")) {
+            setSleepTime(bundle.getInt("sleeptime", 10000));
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -100,6 +112,14 @@ public class SleepWakeTest extends BaseTest {
                 .FLAG_CANCEL_CURRENT);
         am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + milliseconds,
                 pendingIntent);
+    }
+
+    private int getSleepTime() {
+        return mPrefUtils.getInt("sleeptime", 10000);
+    }
+
+    private void setSleepTime(int sleepTime) {
+        mPrefUtils.putInt("sleeptime", sleepTime);
     }
 
     private void registerReceiver() {

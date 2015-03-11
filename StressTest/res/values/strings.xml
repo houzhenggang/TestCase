@@ -38,6 +38,7 @@
     <string name="humidity_sensor_test">Humidity Sensor Test</string>
     <string name="temperature_sensor_test">Temperature Sensor Test</string>
     <string name="reboot_test">Reboot Test</string>
+    <string name="power_on_off_test">Power On/Off Test</string>
     <string name="recovery_test">Recovery Test</string>
     <string name="network_test">Network Service Test</string>
     <string name="network_test2">Network Search Test</string>

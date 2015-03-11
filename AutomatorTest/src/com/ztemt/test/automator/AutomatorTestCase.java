@@ -15,7 +15,7 @@ public class AutomatorTestCase extends UiAutomatorTestCase implements UiWatcher 
         UiObject message = new UiObject(new UiSelector().resourceId(
                 "android:id/message").textStartsWith("很抱歉"));
         UiObject security = new UiObject(new UiSelector().resourceId(
-                "android:id/alertTitle").text("权限"));
+                "android:id/alertTitle").textMatches("^(权限|温馨提示)$"));
         if (message.exists()) {
             try {
                 Log.e(getClass().getSimpleName(), message.getText());

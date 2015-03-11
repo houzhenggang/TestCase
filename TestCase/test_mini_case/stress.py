@@ -119,12 +119,18 @@ class Executor(object):
                     extras.append('{0} {1}'.format(param.attrib['extra'], param.text))
 
         if extras:
+            with open(os.path.join(workdir, 'stress', 'config.txt'), 'r') as f:
+                respath = f.readlines()[3].strip()
+            log(self.msg(u'正在复制压力测试资源'))
+            resdir = '/sdcard/Android/data/com.ztemt.test.stress/files'
+            self.adb.shell('mkdir -p {0}'.format(resdir))
+            self.adb.push(respath.encode('gb2312'), '{0}/test'.format(resdir))
             log(self.msg(u'正在安装压力测试APK'))
             tags = self.adb.getprop('ro.build.tags')
             self.adb.install(os.path.join(workdir, 'stress', 'StressTest_{0}.apk'.format(tags)))
             t = StressMonitorThread(self.adb)
             t.start()
-            log(self.msg(u'正在启动压力测试APK'))
+            log(self.msg(u'正在执行压力测试APK'))
             lines = self.adb.startactivity('-n com.ztemt.test.stress/.AutoTestActivity --es mode auto {0}'.format(' '.join(extras)), 'stress.csv', 30)
             t.stop()
             t.join()

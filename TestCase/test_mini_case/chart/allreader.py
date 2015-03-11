@@ -5,6 +5,8 @@ import csv
 import sys
 import glob
 
+import setfont
+
 import xlwt
 from xlutils.copy import copy 
 from xlrd import open_workbook 
@@ -24,16 +26,15 @@ def get_monkey_info(path):
       return data
 
 
-def write_to_excel(path, name):
-      
-      #设置字体
+def write_to_excel(path, name):      
+        #初始化样式
       style = xlwt.XFStyle()
-      font = xlwt.Font()
-      font.name = 'Times New Roman'
-      font.height = 250
-      font.bold = True   
-      #为样式设置字体 
-      style.font = font
+      style1 = xlwt.XFStyle()
+      
+      f = setfont.Font(0, 220)
+      f1 = setfont.Font(4, 300)
+      style.font = f.fontset(0, 220)
+      style1.font = f1.fontset(4, 300)
     
       filepath = path
       workdir = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -44,16 +45,24 @@ def write_to_excel(path, name):
       rb = open_workbook(os.path.join(filepath, '('+name+')'+'performance.xls'), formatting_info=True)
       r_sheet = rb.sheet_by_index(0) 
       wb = copy(rb) 
-      w_sheet2 = wb.add_sheet('monkey')
+      w_sheet = wb.add_sheet('monkey')
       
       for i in range(0,8):
-            w_sheet2.col(i).width = 0x0d00 + 2000
+            w_sheet.col(i).width = 0x0d00 + 2000
+      w_sheet.write(0, 0, u'整机Monkey测试报告', style1)
+      title = [u'测试随机数', u'预期测试次数', u'实际测试次数', u'测试时间', u'CRASH 次数', u'NOT RESPONDING次数', u'log链接']
+      
+      try:
+            for i in range(len(title)):
+                w_sheet.write(1, i, title[i], style)
+      except IndexError:
+            pass
             
       length2 = len(monkeydata)
 
       for i in range(0,length2-1):
             for j in range(len(monkeydata[i])):
-                  w_sheet2.write(i+2, j+1, unicode(monkeydata[i][j], 'UTF-8'), style)
+                  w_sheet.write(i+2, j, unicode(monkeydata[i][j], 'UTF-8'), style)
       wb.save(os.path.join(filepath, '('+name+')'+'performance.xls'))
 
       

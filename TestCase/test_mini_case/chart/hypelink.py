@@ -338,32 +338,35 @@ def main(path, name):
                   pass
       #monkey
       if os.path.exists(os.path.join(path, 'monkey')):
-            monkey = Monkey(path)
-            crash_log = monkey.crash_log(path)
-            chart_link = monkey.chart_link(path)
-            gpu_log = monkey.gpu_log_link(path)
-
-            if os.path.exists(os.path.join(path, 'memory')):
-                  w_sheet_crash = wb.get_sheet(6)
-                  w_sheet_gpu = wb.get_sheet(7)
+            if os.path.exists(os.path.join(os.path.join(path, 'monkey'), 'monkey.csv')):
+                  pass
             else:
-                  w_sheet_crash = wb.get_sheet(2)
-                  w_sheet_gpu = wb.get_sheet(3)
-            for i in range(10):
-                  w_sheet_crash.col(i).width = 0x0d00 + 2000
-                  w_sheet_gpu.col(i).width = 0x0d00 + 2000
-            try:
-                  for i in range(len(crash_log)):
-                        w_sheet_crash.write(i+2, 7, Formula(link +'("'+crash_log[i]+' ";"log link")'), style1)
-            except IndexError:
-                  pass
+                  monkey = Monkey(path)
+                  crash_log = monkey.crash_log(path)
+                  chart_link = monkey.chart_link(path)
+                  gpu_log = monkey.gpu_log_link(path)
 
-            try:
-                  for i in range(len(chart_link)):
-                        w_sheet_gpu.write(i+2, 2, Formula(link +'("'+chart_link[i]+' ";"chart link")'), style1)
-                        w_sheet_gpu.write(i+2, 3, Formula(link +'("'+gpu_log[i]+' ";"log link")'), style1)
-            except IndexError:
-                  pass
+                  if os.path.exists(os.path.join(path, 'memory')):
+                        w_sheet_crash = wb.get_sheet(6)
+                        w_sheet_gpu = wb.get_sheet(7)
+                  else:
+                        w_sheet_crash = wb.get_sheet(2)
+                        w_sheet_gpu = wb.get_sheet(3)
+                  for i in range(10):
+                        w_sheet_crash.col(i).width = 0x0d00 + 2000
+                        w_sheet_gpu.col(i).width = 0x0d00 + 2000
+                  try:
+                        for i in range(len(crash_log)):
+                              w_sheet_crash.write(i+2, 7, Formula(link +'("'+crash_log[i]+' ";"log link")'), style1)
+                  except IndexError:
+                        pass
+
+                  try:
+                        for i in range(len(chart_link)):
+                              w_sheet_gpu.write(i+2, 2, Formula(link +'("'+chart_link[i]+' ";"chart link")'), style1)
+                              w_sheet_gpu.write(i+2, 3, Formula(link +'("'+gpu_log[i]+' ";"log link")'), style1)
+                  except IndexError:
+                        pass
             
       wb.save(os.path.join(path,'('+name+')'+'performance.xls'))
 
